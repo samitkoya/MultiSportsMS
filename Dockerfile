@@ -12,8 +12,8 @@ COPY frontend2/package*.json ./frontend2/
 RUN npm install
 RUN cd frontend2 && npm install
 
-# Copy the rest of the application code
-COPY . .
+# Copy the rest of the application code with proper ownership
+COPY --chown=node:node . .
 
 # Build the frontend production assets
 RUN npm run build:frontend

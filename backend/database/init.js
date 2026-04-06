@@ -12,9 +12,25 @@ const path = require('path');
 
 // Use /data/msms.db if on Hugging Face (Persistent Storage mount point)
 // Otherwise use the local project directory.
-const DB_PATH = process.env.SPACE_ID 
-    ? '/data/msms.db' 
-    : path.join(__dirname, 'msms.db');
+// We check for writability to /data to avoid EACCES errors on HF.
+const getDbPath = () => {
+    const localPath = path.join(__dirname, 'msms.db');
+    if (process.env.SPACE_ID) {
+        try {
+            // Check if /data exists and is writable
+            const testFile = '/data/.write_test';
+            fs.writeFileSync(testFile, 'test');
+            fs.unlinkSync(testFile);
+            return '/data/msms.db';
+        } catch (e) {
+            console.warn('[DB] /data is not writable or missing. Falling back to local storage in /app.');
+            return localPath;
+        }
+    }
+    return localPath;
+};
+
+const DB_PATH = getDbPath();
 
 const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
 const SEED_PATH = path.join(__dirname, 'seed.sql');
