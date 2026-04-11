@@ -50,6 +50,121 @@ function applyMigrations(db) {
         console.log('[DB] Applying migration: add teams.team_image_url');
         db.run('ALTER TABLE teams ADD COLUMN team_image_url TEXT');
     }
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS player_team_memberships (
+            membership_id    INTEGER PRIMARY KEY AUTOINCREMENT,
+            player_id        INTEGER NOT NULL,
+            team_id          INTEGER NOT NULL,
+            jersey_number    INTEGER,
+            position         TEXT,
+            membership_type  TEXT    NOT NULL DEFAULT 'club' CHECK (membership_type IN ('club', 'country', 'loan', 'academy', 'other')),
+            is_active        BOOLEAN DEFAULT 1,
+            start_date       DATE    DEFAULT CURRENT_DATE,
+            end_date         DATE,
+            notes            TEXT,
+            created_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE (player_id, team_id, membership_type, is_active),
+            FOREIGN KEY (player_id) REFERENCES players(player_id) ON DELETE CASCADE,
+            FOREIGN KEY (team_id)   REFERENCES teams(team_id)   ON DELETE CASCADE
+        )
+    `);
+
+    db.run('CREATE INDEX IF NOT EXISTS idx_memberships_player ON player_team_memberships(player_id, is_active)');
+    db.run('CREATE INDEX IF NOT EXISTS idx_memberships_team ON player_team_memberships(team_id, is_active)');
+
+    db.run(`
+        INSERT OR IGNORE INTO player_team_memberships
+            (player_id, team_id, jersey_number, position, membership_type, is_active, start_date)
+        SELECT
+            player_id,
+            team_id,
+            jersey_number,
+            position,
+            'club',
+            CASE WHEN is_deleted = 0 THEN 1 ELSE 0 END,
+            joined_date
+        FROM players
+        WHERE team_id IS NOT NULL
+    `);
+
+    // Recreate views that depend on player/team relationships.
+    db.run('DROP VIEW IF EXISTS v_player_statistics');
+    db.run('DROP VIEW IF EXISTS v_top_scorers');
+    db.run('DROP VIEW IF EXISTS v_team_roster');
+    db.run(`
+        CREATE VIEW IF NOT EXISTS v_player_statistics AS
+        SELECT
+            p.player_id,
+            p.first_name || ' ' || p.last_name AS player_name,
+            t.name AS team_name,
+            s.name AS sport_name,
+            s.sport_id,
+            COUNT(pms.match_id) AS matches_played,
+            COALESCE(SUM(pms.runs_scored), 0) AS total_runs,
+            COALESCE(SUM(pms.balls_faced), 0) AS total_balls_faced,
+            COALESCE(SUM(pms.wickets_taken), 0) AS total_wickets,
+            COALESCE(SUM(pms.goals_scored), 0) AS total_goals,
+            COALESCE(SUM(pms.assists), 0) AS total_assists,
+            COALESCE(SUM(pms.yellow_cards), 0) AS total_yellow_cards,
+            COALESCE(SUM(pms.red_cards), 0) AS total_red_cards,
+            COALESCE(SUM(pms.points_won), 0) AS total_points_won,
+            COALESCE(SUM(pms.sets_won), 0) AS total_sets_won,
+            COALESCE(SUM(pms.games_won), 0) AS total_games_won,
+            ROUND(AVG(pms.rating), 2) AS avg_rating
+        FROM players p
+        LEFT JOIN teams t ON p.team_id = t.team_id
+        LEFT JOIN sports s ON t.sport_id = s.sport_id
+        LEFT JOIN player_match_stats pms ON p.player_id = pms.player_id
+        WHERE p.is_deleted = 0
+        GROUP BY p.player_id
+    `);
+    db.run(`
+        CREATE VIEW IF NOT EXISTS v_top_scorers AS
+        SELECT
+            p.player_id,
+            p.first_name || ' ' || p.last_name AS player_name,
+            t.name AS team_name,
+            s.name AS sport_name,
+            s.sport_id,
+            CASE
+                WHEN s.name = 'Cricket'   THEN COALESCE(SUM(pms.runs_scored), 0)
+                WHEN s.name = 'Football'  THEN COALESCE(SUM(pms.goals_scored), 0)
+                WHEN s.name = 'Tennis'    THEN COALESCE(SUM(pms.points_won), 0)
+                WHEN s.name = 'Badminton' THEN COALESCE(SUM(pms.points_won), 0)
+                ELSE 0
+            END AS score_total,
+            COUNT(pms.match_id) AS matches_played
+        FROM players p
+        LEFT JOIN teams t ON p.team_id = t.team_id
+        LEFT JOIN sports s ON t.sport_id = s.sport_id
+        LEFT JOIN player_match_stats pms ON p.player_id = pms.player_id
+        WHERE p.is_deleted = 0
+        GROUP BY p.player_id
+        HAVING score_total > 0
+        ORDER BY sport_name, score_total DESC
+    `);
+    db.run(`
+        CREATE VIEW IF NOT EXISTS v_team_roster AS
+        SELECT
+            t.team_id,
+            t.name AS team_name,
+            t.status AS team_status,
+            t.founded_year,
+            s.name AS sport_name,
+            s.sport_id,
+            COALESCE(c.first_name || ' ' || c.last_name, 'No Coach') AS coach_name,
+            c.coach_id,
+            COALESCE(v.name, 'No Home Venue') AS home_venue,
+            v.venue_id,
+            COUNT(DISTINCT ptm.player_id) AS player_count
+        FROM teams t
+        JOIN sports s ON t.sport_id = s.sport_id
+        LEFT JOIN coaches c ON t.coach_id = c.coach_id
+        LEFT JOIN venues v ON t.home_venue_id = v.venue_id
+        LEFT JOIN player_team_memberships ptm ON t.team_id = ptm.team_id AND ptm.is_active = 1
+        GROUP BY t.team_id
+    `);
 }
 
 /**

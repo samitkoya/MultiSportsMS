@@ -1,408 +1,609 @@
 -- ============================================================
--- Multi-Sports Management System — Seed Data
+-- Multi-Sports Management System - Real-world Seed Data
 -- ============================================================
--- Populates the database with realistic sample data for demonstration.
--- 4 sports, 6 venues, 8 coaches, 8 teams, 48 players,
--- 4 events, 8 matches, 60+ match events, player stats.
+-- Populates the database with realistic multi-sport sample data.
+-- Real clubs, national teams, players, venues, and coaches are used
+-- where confidently known. Fictional contact details and asset URLs
+-- are used for non-public fields such as emails, phones, and icons.
 -- ============================================================
 
 -- ============================================================
--- SPORTS (4 sports with detailed rules JSON)
+-- SPORTS
 -- ============================================================
 INSERT INTO sports (name, category, max_players_per_team, min_players_per_team, scoring_unit, description, rules_json) VALUES
 ('Cricket', 'Outdoor', 11, 11, 'runs',
  'A bat-and-ball game played between two teams of eleven players on a field.',
- '{"overs_per_innings": 20, "innings": 2, "wicket_types": ["bowled","caught","lbw","run_out","stumped","hit_wicket"], "extras": ["wide","no_ball","bye","leg_bye"], "boundary_4": 4, "boundary_6": 6}'),
-
+ '{"overs_per_innings":20,"innings":2,"wicket_types":["bowled","caught","lbw","run_out","stumped","hit_wicket"],"extras":["wide","no_ball","bye","leg_bye"],"boundary_4":4,"boundary_6":6}'),
 ('Football', 'Outdoor', 11, 7, 'goals',
  'A team sport played between two teams of eleven players with a spherical ball.',
- '{"halves": 2, "half_duration_minutes": 45, "extra_time_minutes": 30, "cards": ["yellow","red"], "offside": true, "substitutions_allowed": 5}'),
-
+ '{"halves":2,"half_duration_minutes":45,"extra_time_minutes":30,"cards":["yellow","red"],"offside":true,"substitutions_allowed":5}'),
 ('Tennis', 'Outdoor', 2, 1, 'points',
- 'A racket sport played individually (singles) or in pairs (doubles).',
- '{"sets_to_win": 2, "games_per_set": 6, "points": ["0","15","30","40","deuce","advantage"], "tiebreak_at": 6, "final_set_tiebreak": true}'),
-
+ 'A racket sport played individually or in doubles, organized here through national teams.',
+ '{"sets_to_win":2,"games_per_set":6,"points":["0","15","30","40","deuce","advantage"],"tiebreak_at":6,"final_set_tiebreak":true}'),
 ('Badminton', 'Indoor', 2, 1, 'points',
  'A racket sport played using racquets to hit a shuttlecock across a net.',
- '{"sets_to_win": 2, "points_per_set": 21, "win_by": 2, "max_points": 30, "rally_point_scoring": true}');
+ '{"sets_to_win":2,"points_per_set":21,"win_by":2,"max_points":30,"rally_point_scoring":true}');
 
 -- ============================================================
--- VENUES (6 venues — 2 cricket, 2 football, 1 tennis, 1 badminton)
+-- VENUES
 -- ============================================================
 INSERT INTO venues (name, location, capacity, surface_type) VALUES
-('Greenfield Cricket Stadium', 'Mumbai, India', 33000, 'Natural Turf'),
-('Riverside Cricket Ground',   'Chennai, India', 25000, 'Natural Turf'),
-('Metro Football Arena',       'Bangalore, India', 40000, 'Artificial Turf'),
-('Thunderdome Stadium',        'Delhi, India', 35000, 'Natural Turf'),
-('Ace Tennis Club',             'Hyderabad, India', 5000, 'Hard Court'),
-('Shuttle Sports Complex',     'Pune, India', 3000, 'Wooden');
+('Wankhede Stadium', 'Mumbai, India', 33000, 'Natural Turf'),
+('M A Chidambaram Stadium', 'Chennai, India', 38000, 'Natural Turf'),
+('M Chinnaswamy Stadium', 'Bengaluru, India', 40000, 'Natural Turf'),
+('Eden Gardens', 'Kolkata, India', 68000, 'Natural Turf'),
+('Rajiv Gandhi International Cricket Stadium', 'Hyderabad, India', 55000, 'Natural Turf'),
+('Sawai Mansingh Stadium', 'Jaipur, India', 30000, 'Natural Turf'),
+('Arun Jaitley Stadium', 'Delhi, India', 35000, 'Natural Turf'),
+('Maharaja Yadavindra Singh International Cricket Stadium', 'Mullanpur, India', 38000, 'Natural Turf'),
+('Narendra Modi Stadium', 'Ahmedabad, India', 132000, 'Natural Turf'),
+('BRSABV Ekana Cricket Stadium', 'Lucknow, India', 50000, 'Natural Turf'),
+('Melbourne Cricket Ground', 'Melbourne, Australia', 100024, 'Natural Turf'),
+('Lord''s Cricket Ground', 'London, England', 31000, 'Natural Turf'),
+('Gaddafi Stadium', 'Lahore, Pakistan', 27000, 'Natural Turf'),
+('The Wanderers Stadium', 'Johannesburg, South Africa', 34000, 'Natural Turf'),
+('Anfield', 'Liverpool, England', 61276, 'Grass'),
+('Old Trafford', 'Manchester, England', 74310, 'Grass'),
+('Etihad Stadium', 'Manchester, England', 53400, 'Grass'),
+('Stamford Bridge', 'London, England', 40341, 'Grass'),
+('Emirates Stadium', 'London, England', 60704, 'Grass'),
+('Santiago Bernabeu', 'Madrid, Spain', 85000, 'Grass'),
+('Estadi Olimpic Lluis Companys', 'Barcelona, Spain', 55926, 'Grass'),
+('Metropolitano Stadium', 'Madrid, Spain', 70460, 'Grass'),
+('Estadi Montilivi', 'Girona, Spain', 14500, 'Grass'),
+('Benito Villamarin Stadium', 'Seville, Spain', 60721, 'Grass'),
+('Allianz Arena', 'Munich, Germany', 75000, 'Grass'),
+('Signal Iduna Park', 'Dortmund, Germany', 81365, 'Grass'),
+('BayArena', 'Leverkusen, Germany', 30210, 'Grass'),
+('Red Bull Arena', 'Leipzig, Germany', 47069, 'Grass'),
+('MHPArena', 'Stuttgart, Germany', 60469, 'Grass'),
+('Belgrade Arena', 'Belgrade, Serbia', 18000, 'Hard Court'),
+('Caja Magica', 'Madrid, Spain', 12500, 'Clay'),
+('Foro Italico Centre Court', 'Rome, Italy', 10500, 'Clay'),
+('Arena Gdansk Tennis Centre', 'Gdansk, Poland', 8000, 'Hard Court'),
+('USTA Billie Jean King National Tennis Center', 'New York, USA', 23771, 'Hard Court'),
+('K D Jadhav Indoor Hall', 'New Delhi, India', 6000, 'Wooden'),
+('Royal Arena', 'Copenhagen, Denmark', 13000, 'Wooden'),
+('Istora Senayan', 'Jakarta, Indonesia', 7236, 'Wooden'),
+('Beijing Olympic Sports Center Gymnasium', 'Beijing, China', 7000, 'Wooden'),
+('SK Olympic Handball Gymnasium', 'Seoul, South Korea', 6500, 'Wooden');
 
 -- ============================================================
--- COACHES (8 coaches with varied specializations)
+-- COACHES
 -- ============================================================
 INSERT INTO coaches (first_name, last_name, email, phone, specialization, experience_years) VALUES
-('Rahul',   'Dravid',    'rahul.dravid@msms.com',    '+91-9001000001', 'Cricket Batting',       18),
-('Anil',    'Kumble',    'anil.kumble@msms.com',      '+91-9001000002', 'Cricket Bowling',       15),
-('Marco',   'Silva',     'marco.silva@msms.com',      '+91-9001000003', 'Football Tactics',      12),
-('Elena',   'Rodriguez', 'elena.rodriguez@msms.com',  '+91-9001000004', 'Football Defense',      10),
-('Patrick', 'Mouratoglou', 'patrick.m@msms.com',      '+91-9001000005', 'Tennis Strategy',       20),
-('Li',      'Wei',       'li.wei@msms.com',            '+91-9001000006', 'Tennis Conditioning',   8),
-('Pullela', 'Gopichand', 'pullela.g@msms.com',         '+91-9001000007', 'Badminton Singles',     22),
-('Tan',     'Kim Her',   'tan.kimher@msms.com',        '+91-9001000008', 'Badminton Doubles',     14);
+('Mahela', 'Jayawardene', 'mahela.jayawardene@seed.msms.local', '+91-22-5550-0101', 'T20 Cricket Strategy', 11),
+('Stephen', 'Fleming', 'stephen.fleming@seed.msms.local', '+91-44-5550-0102', 'Cricket Leadership', 16),
+('Andy', 'Flower', 'andy.flower@seed.msms.local', '+91-80-5550-0103', 'Batting and Matchups', 15),
+('Abhishek', 'Nayar', 'abhishek.nayar@seed.msms.local', '+91-33-5550-0104', 'Player Development', 7),
+('Daniel', 'Vettori', 'daniel.vettori@seed.msms.local', '+91-40-5550-0105', 'Spin and T20 Tactics', 10),
+('Rahul', 'Dravid', 'rahul.dravid@seed.msms.local', '+91-141-5550-0106', 'Batting and Culture', 9),
+('Hemang', 'Badani', 'hemang.badani@seed.msms.local', '+91-11-5550-0107', 'White-ball Cricket', 5),
+('Ricky', 'Ponting', 'ricky.ponting@seed.msms.local', '+91-172-5550-0108', 'T20 Leadership', 13),
+('Ashish', 'Nehra', 'ashish.nehra@seed.msms.local', '+91-79-5550-0109', 'Fast Bowling and T20 Plans', 8),
+('Justin', 'Langer', 'justin.langer@seed.msms.local', '+91-522-5550-0110', 'High Performance Cricket', 14),
+('Gautam', 'Gambhir', 'gautam.gambhir@seed.msms.local', '+91-79-5550-0111', 'International Cricket', 4),
+('Andrew', 'McDonald', 'andrew.mcdonald@seed.msms.local', '+61-3-5550-0112', 'International Cricket', 6),
+('Brendon', 'McCullum', 'brendon.mccullum@seed.msms.local', '+44-20-5550-0113', 'Aggressive White-ball Cricket', 8),
+('Aaqib', 'Javed', 'aaqib.javed@seed.msms.local', '+92-42-5550-0114', 'Fast Bowling and T20 Plans', 7),
+('Shukri', 'Conrad', 'shukri.conrad@seed.msms.local', '+27-11-5550-0115', 'International Cricket', 6),
+('Arne', 'Slot', 'arne.slot@seed.msms.local', '+44-151-5550-0201', 'Football Tactics', 12),
+('Michael', 'Carrick', 'michael.carrick@seed.msms.local', '+44-161-5550-0202', 'Midfield Structure', 5),
+('Pep', 'Guardiola', 'pep.guardiola@seed.msms.local', '+44-161-5550-0203', 'Positional Play', 18),
+('Enzo', 'Maresca', 'enzo.maresca@seed.msms.local', '+44-20-5550-0204', 'Ball Progression', 6),
+('Mikel', 'Arteta', 'mikel.arteta@seed.msms.local', '+44-20-5550-0205', 'Pressing Structure', 9),
+('Carlo', 'Ancelotti', 'carlo.ancelotti@seed.msms.local', '+34-91-5550-0206', 'Elite Match Management', 24),
+('Hansi', 'Flick', 'hansi.flick@seed.msms.local', '+34-93-5550-0207', 'High Pressing Football', 12),
+('Diego', 'Simeone', 'diego.simeone@seed.msms.local', '+34-91-5550-0208', 'Defensive Organization', 14),
+('Michel', 'Sanchez', 'michel.sanchez@seed.msms.local', '+34-972-5550-0209', 'Attacking Transitions', 7),
+('Manuel', 'Pellegrini', 'manuel.pellegrini@seed.msms.local', '+34-95-5550-0210', 'Game Control', 20),
+('Vincent', 'Kompany', 'vincent.kompany@seed.msms.local', '+49-89-5550-0211', 'Front-foot Football', 5),
+('Niko', 'Kovac', 'niko.kovac@seed.msms.local', '+49-231-5550-0212', 'Competitive Structure', 10),
+('Xabi', 'Alonso', 'xabi.alonso@seed.msms.local', '+49-214-5550-0213', 'Build-up and Pressing', 6),
+('Marco', 'Rose', 'marco.rose@seed.msms.local', '+49-341-5550-0214', 'Transition Football', 9),
+('Sebastian', 'Hoeness', 'sebastian.hoeness@seed.msms.local', '+49-711-5550-0215', 'Attacking Shape', 7),
+('Viktor', 'Troicki', 'viktor.troicki@seed.msms.local', '+381-11-5550-0301', 'Tennis Davis Cup Coaching', 6),
+('David', 'Ferrer', 'david.ferrer@seed.msms.local', '+34-91-5550-0302', 'Clay Court Tennis', 4),
+('Filippo', 'Volandri', 'filippo.volandri@seed.msms.local', '+39-06-5550-0303', 'Tennis Team Leadership', 5),
+('Dawid', 'Celt', 'dawid.celt@seed.msms.local', '+48-58-5550-0304', 'Women''s Tennis Coaching', 7),
+('Bob', 'Bryan', 'bob.bryan@seed.msms.local', '+1-718-5550-0305', 'Doubles and Team Tennis', 4),
+('Pullela', 'Gopichand', 'pullela.gopichand@seed.msms.local', '+91-11-5550-0401', 'Badminton Singles', 18),
+('Kenneth', 'Jonassen', 'kenneth.jonassen@seed.msms.local', '+45-32-5550-0402', 'Badminton Team Coaching', 11),
+('Eng', 'Hian', 'eng.hian@seed.msms.local', '+62-21-5550-0403', 'Doubles Development', 9),
+('Xia', 'Xuanze', 'xia.xuanze@seed.msms.local', '+86-10-5550-0404', 'Elite Badminton', 10),
+('Ra', 'Kyung-min', 'ra.kyungmin@seed.msms.local', '+82-2-5550-0405', 'Badminton Team Development', 8);
 
 -- ============================================================
--- TEAMS (8 teams — 2 per sport)
+-- TEAMS
+-- Team order is intentional so later inserts can refer to stable ids.
+-- 1-10: IPL clubs
+-- 11-15: ICC national teams
+-- 16-30: Football clubs
+-- 31-35: Tennis national teams
+-- 36-40: Badminton national teams
 -- ============================================================
-INSERT INTO teams (name, sport_id, coach_id, founded_year, home_venue_id, status) VALUES
-('Royal Strikers',  1, 1, 2018, 1, 'active'),    -- Cricket, Coach Rahul, Greenfield
-('Thunder Lions',   1, 2, 2019, 2, 'active'),    -- Cricket, Coach Anil, Riverside
-('Phoenix FC',      2, 3, 2017, 3, 'active'),    -- Football, Coach Marco, Metro Arena
-('Storm United',    2, 4, 2020, 4, 'active'),    -- Football, Coach Elena, Thunderdome
-('Ace Elite',       3, 5, 2016, 5, 'active'),    -- Tennis, Coach Patrick, Ace Club
-('Net Blazers',     3, 6, 2021, 5, 'active'),    -- Tennis, Coach Li, Ace Club
-('Shuttle Kings',   4, 7, 2015, 6, 'active'),    -- Badminton, Coach Pullela, Shuttle Complex
-('Smash Warriors',  4, 8, 2019, 6, 'active');    -- Badminton, Coach Tan, Shuttle Complex
-
--- ============================================================
--- PLAYERS (48 total — 11 per cricket team, 11 per football team, 3 per tennis team, 4 per badminton team)
--- ============================================================
-
--- Royal Strikers (Cricket - Team 1) — 11 players
-INSERT INTO players (first_name, last_name, email, date_of_birth, gender, team_id, jersey_number, position, status) VALUES
-('Virat',    'Sharma',   'virat.sharma@msms.com',    '1998-05-15', 'Male', 1, 18, 'Batsman',        'active'),
-('Rohit',    'Patel',    'rohit.patel@msms.com',     '1997-03-22', 'Male', 1, 45, 'Batsman',        'active'),
-('Shubman', 'Gill',     'shubman.gill@msms.com',    '1999-09-08', 'Male', 1, 7,  'Batsman',        'active'),
-('Hardik',   'Pandya',   'hardik.pandya@msms.com',   '1996-11-11', 'Male', 1, 33, 'All-Rounder',    'active'),
-('Ravindra', 'Jadeja',   'ravindra.jadeja@msms.com', '1995-12-06', 'Male', 1, 8,  'All-Rounder',    'active'),
-('Jasprit',  'Bumrah',   'jasprit.bumrah@msms.com',  '1997-01-28', 'Male', 1, 93, 'Bowler',         'active'),
-('Mohammed', 'Shami',    'mohammed.shami@msms.com',  '1994-09-03', 'Male', 1, 11, 'Bowler',         'active'),
-('Rishabh',  'Iyer',     'rishabh.iyer@msms.com',    '2000-04-12', 'Male', 1, 77, 'Wicket-Keeper',  'active'),
-('Kuldeep',  'Yadav',    'kuldeep.yadav@msms.com',   '1998-08-14', 'Male', 1, 23, 'Bowler',         'active'),
-('Axar',     'Singh',    'axar.singh@msms.com',      '1997-06-20', 'Male', 1, 28, 'All-Rounder',    'active'),
-('Shreyas',  'Kumar',    'shreyas.kumar@msms.com',   '1999-02-18', 'Male', 1, 41, 'Batsman',        'active');
-
--- Thunder Lions (Cricket - Team 2) — 11 players
-INSERT INTO players (first_name, last_name, email, date_of_birth, gender, team_id, jersey_number, position, status) VALUES
-('KL',       'Rahul',    'kl.rahul@msms.com',        '1996-04-18', 'Male', 2, 1,  'Batsman',        'active'),
-('Suryakumar','Yadav',   'suryakumar.y@msms.com',    '1998-09-14', 'Male', 2, 63, 'Batsman',        'active'),
-('Ishan',    'Kishan',   'ishan.kishan@msms.com',    '2000-07-18', 'Male', 2, 32, 'Wicket-Keeper',  'active'),
-('Shardul',  'Thakur',   'shardul.thakur@msms.com',  '1995-10-16', 'Male', 2, 54, 'All-Rounder',    'active'),
-('Yuzvendra','Chahal',   'yuzvendra.c@msms.com',     '1997-07-23', 'Male', 2, 3,  'Bowler',         'active'),
-('Bhuvneshwar','Kumar',  'bhuvneshwar.k@msms.com',   '1993-02-05', 'Male', 2, 15, 'Bowler',         'active'),
-('Dinesh',   'Karthik',  'dinesh.karthik@msms.com',  '1992-06-01', 'Male', 2, 21, 'Batsman',        'active'),
-('Washington','Sundar',  'washington.s@msms.com',     '2001-10-05', 'Male', 2, 29, 'All-Rounder',    'active'),
-('Deepak',   'Chahar',   'deepak.chahar@msms.com',   '1996-08-07', 'Male', 2, 9,  'Bowler',         'active'),
-('Prithvi',  'Shaw',     'prithvi.shaw@msms.com',    '2001-11-09', 'Male', 2, 44, 'Batsman',        'active'),
-('Navdeep',  'Saini',    'navdeep.saini@msms.com',   '1996-11-23', 'Male', 2, 19, 'Bowler',         'active');
-
--- Phoenix FC (Football - Team 3) — 11 players
-INSERT INTO players (first_name, last_name, email, date_of_birth, gender, team_id, jersey_number, position, status) VALUES
-('Carlos',   'Martinez', 'carlos.m@msms.com',        '1995-03-12', 'Male', 3, 1,  'Goalkeeper',  'active'),
-('Ahmed',    'Hassan',   'ahmed.hassan@msms.com',     '1997-07-08', 'Male', 3, 4,  'Defender',    'active'),
-('David',    'Kim',      'david.kim@msms.com',        '1996-11-25', 'Male', 3, 5,  'Defender',    'active'),
-('Lucas',    'Santos',   'lucas.santos@msms.com',     '1998-05-14', 'Male', 3, 3,  'Defender',    'active'),
-('James',    'Wilson',   'james.wilson@msms.com',     '1997-09-30', 'Male', 3, 6,  'Midfielder',  'active'),
-('Omar',     'Ali',      'omar.ali@msms.com',         '1999-01-17', 'Male', 3, 8,  'Midfielder',  'active'),
-('Yuki',     'Tanaka',   'yuki.tanaka@msms.com',      '1998-04-22', 'Male', 3, 10, 'Midfielder',  'active'),
-('Leo',      'Fernandez','leo.fernandez@msms.com',    '1996-12-05', 'Male', 3, 7,  'Forward',     'active'),
-('Marcus',   'Johnson',  'marcus.johnson@msms.com',   '1997-08-19', 'Male', 3, 9,  'Forward',     'active'),
-('Ravi',     'Nair',     'ravi.nair@msms.com',        '2000-02-28', 'Male', 3, 11, 'Forward',     'active'),
-('Pedro',    'Garcia',   'pedro.garcia@msms.com',     '1995-06-13', 'Male', 3, 2,  'Defender',    'active');
-
--- Storm United (Football - Team 4) — 11 players
-INSERT INTO players (first_name, last_name, email, date_of_birth, gender, team_id, jersey_number, position, status) VALUES
-('Viktor',   'Petrov',   'viktor.petrov@msms.com',    '1994-10-05', 'Male', 4, 1,  'Goalkeeper',  'active'),
-('Arjun',    'Reddy',    'arjun.reddy@msms.com',      '1997-03-18', 'Male', 4, 4,  'Defender',    'active'),
-('Chen',     'Wei',      'chen.wei@msms.com',          '1996-08-27', 'Male', 4, 5,  'Defender',    'active'),
-('Bruno',    'Costa',    'bruno.costa@msms.com',       '1998-01-09', 'Male', 4, 3,  'Defender',    'active'),
-('Takeshi',  'Yamamoto', 'takeshi.y@msms.com',         '1999-05-21', 'Male', 4, 6,  'Midfielder',  'active'),
-('Sanjay',   'Gupta',    'sanjay.gupta@msms.com',      '1997-12-14', 'Male', 4, 8,  'Midfielder',  'active'),
-('Felix',    'Mueller',  'felix.mueller@msms.com',     '1998-07-03', 'Male', 4, 10, 'Midfielder',  'active'),
-('Diego',    'Rivera',   'diego.rivera@msms.com',      '1996-04-16', 'Male', 4, 7,  'Forward',     'active'),
-('Kwame',    'Asante',   'kwame.asante@msms.com',      '1999-09-28', 'Male', 4, 9,  'Forward',     'active'),
-('Nikolai',  'Ivanov',   'nikolai.iv@msms.com',        '2000-06-11', 'Male', 4, 11, 'Forward',     'active'),
-('Hassan',   'Omar',     'hassan.omar@msms.com',       '1995-11-22', 'Male', 4, 2,  'Defender',    'active');
-
--- Ace Elite (Tennis - Team 5) — 3 players
-INSERT INTO players (first_name, last_name, email, date_of_birth, gender, team_id, jersey_number, position, status) VALUES
-('Rafael',   'Mendez',   'rafael.mendez@msms.com',    '1996-06-03', 'Male', 5, 1, 'Singles Player', 'active'),
-('Sofia',    'Laurent',  'sofia.laurent@msms.com',     '1998-10-21', 'Female', 5, 2, 'Singles Player', 'active'),
-('Andrei',   'Volkov',   'andrei.volkov@msms.com',     '1997-02-14', 'Male', 5, 3, 'Doubles Player', 'active');
-
--- Net Blazers (Tennis - Team 6) — 3 players
-INSERT INTO players (first_name, last_name, email, date_of_birth, gender, team_id, jersey_number, position, status) VALUES
-('Nina',     'Petrova',  'nina.petrova@msms.com',      '1999-04-07', 'Female', 6, 1, 'Singles Player', 'active'),
-('Kenji',    'Watanabe', 'kenji.watanabe@msms.com',    '1997-08-30', 'Male', 6, 2, 'Singles Player', 'active'),
-('Maria',    'Gonzalez', 'maria.gonzalez@msms.com',    '1998-12-15', 'Female', 6, 3, 'Doubles Player', 'active');
-
--- Shuttle Kings (Badminton - Team 7) — 4 players
-INSERT INTO players (first_name, last_name, email, date_of_birth, gender, team_id, jersey_number, position, status) VALUES
-('Lakshya',  'Sen',      'lakshya.sen@msms.com',       '2001-08-16', 'Male', 7, 1, 'Singles Player', 'active'),
-('Saina',    'Patil',    'saina.patil@msms.com',       '1998-03-17', 'Female', 7, 2, 'Singles Player', 'active'),
-('Chirag',   'Shetty',   'chirag.shetty@msms.com',    '1997-07-04', 'Male', 7, 3, 'Doubles Player', 'active'),
-('Satwiksai','Rankireddy','satwik.r@msms.com',         '2000-08-13', 'Male', 7, 4, 'Doubles Player', 'active');
-
--- Smash Warriors (Badminton - Team 8) — 4 players
-INSERT INTO players (first_name, last_name, email, date_of_birth, gender, team_id, jersey_number, position, status) VALUES
-('Viktor',   'Axelsen',  'viktor.axelsen@msms.com',    '1994-01-04', 'Male', 8, 1, 'Singles Player', 'active'),
-('PV',       'Sindhu',   'pv.sindhu@msms.com',          '1995-07-05', 'Female', 8, 2, 'Singles Player', 'active'),
-('Aaron',    'Chia',     'aaron.chia@msms.com',         '1998-06-15', 'Male', 8, 3, 'Doubles Player', 'active'),
-('Soh',      'Wooi Yik', 'soh.wooiyik@msms.com',       '1998-02-23', 'Male', 8, 4, 'Doubles Player', 'active');
+INSERT INTO teams (name, sport_id, coach_id, founded_year, home_venue_id, team_image_url, status) VALUES
+('Mumbai Indians', 1, 1, 2008, 1, 'https://assets.msms.local/teams/cricket/mumbai-indians.png', 'active'),
+('Chennai Super Kings', 1, 2, 2008, 2, 'https://assets.msms.local/teams/cricket/chennai-super-kings.png', 'active'),
+('Royal Challengers Bengaluru', 1, 3, 2008, 3, 'https://assets.msms.local/teams/cricket/royal-challengers-bengaluru.png', 'active'),
+('Kolkata Knight Riders', 1, 4, 2008, 4, 'https://assets.msms.local/teams/cricket/kolkata-knight-riders.png', 'active'),
+('Sunrisers Hyderabad', 1, 5, 2012, 5, 'https://assets.msms.local/teams/cricket/sunrisers-hyderabad.png', 'active'),
+('Rajasthan Royals', 1, 6, 2008, 6, 'https://assets.msms.local/teams/cricket/rajasthan-royals.png', 'active'),
+('Delhi Capitals', 1, 7, 2008, 7, 'https://assets.msms.local/teams/cricket/delhi-capitals.png', 'active'),
+('Punjab Kings', 1, 8, 2008, 8, 'https://assets.msms.local/teams/cricket/punjab-kings.png', 'active'),
+('Gujarat Titans', 1, 9, 2021, 9, 'https://assets.msms.local/teams/cricket/gujarat-titans.png', 'active'),
+('Lucknow Super Giants', 1, 10, 2021, 10, 'https://assets.msms.local/teams/cricket/lucknow-super-giants.png', 'active'),
+('India', 1, 11, 1932, 9, 'https://assets.msms.local/teams/cricket/india.png', 'active'),
+('Australia', 1, 12, 1877, 11, 'https://assets.msms.local/teams/cricket/australia.png', 'active'),
+('England', 1, 13, 1877, 12, 'https://assets.msms.local/teams/cricket/england.png', 'active'),
+('Pakistan', 1, 14, 1952, 13, 'https://assets.msms.local/teams/cricket/pakistan.png', 'active'),
+('South Africa', 1, 15, 1889, 14, 'https://assets.msms.local/teams/cricket/south-africa.png', 'active'),
+('Liverpool', 2, 16, 1892, 15, 'https://assets.msms.local/teams/football/liverpool.png', 'active'),
+('Manchester United', 2, 17, 1878, 16, 'https://assets.msms.local/teams/football/manchester-united.png', 'active'),
+('Manchester City', 2, 18, 1880, 17, 'https://assets.msms.local/teams/football/manchester-city.png', 'active'),
+('Chelsea', 2, 19, 1905, 18, 'https://assets.msms.local/teams/football/chelsea.png', 'active'),
+('Arsenal', 2, 20, 1886, 19, 'https://assets.msms.local/teams/football/arsenal.png', 'active'),
+('Real Madrid', 2, 21, 1902, 20, 'https://assets.msms.local/teams/football/real-madrid.png', 'active'),
+('Barcelona', 2, 22, 1899, 21, 'https://assets.msms.local/teams/football/barcelona.png', 'active'),
+('Atletico Madrid', 2, 23, 1903, 22, 'https://assets.msms.local/teams/football/atletico-madrid.png', 'active'),
+('Girona', 2, 24, 1930, 23, 'https://assets.msms.local/teams/football/girona.png', 'active'),
+('Real Betis', 2, 25, 1907, 24, 'https://assets.msms.local/teams/football/real-betis.png', 'active'),
+('Bayern Munich', 2, 26, 1900, 25, 'https://assets.msms.local/teams/football/bayern-munich.png', 'active'),
+('Borussia Dortmund', 2, 27, 1909, 26, 'https://assets.msms.local/teams/football/borussia-dortmund.png', 'active'),
+('Bayer Leverkusen', 2, 28, 1904, 27, 'https://assets.msms.local/teams/football/bayer-leverkusen.png', 'active'),
+('RB Leipzig', 2, 29, 2009, 28, 'https://assets.msms.local/teams/football/rb-leipzig.png', 'active'),
+('VfB Stuttgart', 2, 30, 1893, 29, 'https://assets.msms.local/teams/football/vfb-stuttgart.png', 'active'),
+('Serbia', 3, 31, 2006, 30, 'https://assets.msms.local/teams/tennis/serbia.png', 'active'),
+('Spain', 3, 32, 1909, 31, 'https://assets.msms.local/teams/tennis/spain.png', 'active'),
+('Italy', 3, 33, 1910, 32, 'https://assets.msms.local/teams/tennis/italy.png', 'active'),
+('Poland', 3, 34, 1921, 33, 'https://assets.msms.local/teams/tennis/poland.png', 'active'),
+('United States', 3, 35, 1881, 34, 'https://assets.msms.local/teams/tennis/united-states.png', 'active'),
+('India Badminton', 4, 36, 1934, 35, 'https://assets.msms.local/teams/badminton/india.png', 'active'),
+('Denmark Badminton', 4, 37, 1930, 36, 'https://assets.msms.local/teams/badminton/denmark.png', 'active'),
+('Indonesia Badminton', 4, 38, 1951, 37, 'https://assets.msms.local/teams/badminton/indonesia.png', 'active'),
+('China Badminton', 4, 39, 1958, 38, 'https://assets.msms.local/teams/badminton/china.png', 'active'),
+('South Korea Badminton', 4, 40, 1957, 39, 'https://assets.msms.local/teams/badminton/south-korea.png', 'active');
 
 -- ============================================================
--- EVENTS (4 tournaments — 1 per sport)
+-- PLAYERS
+-- Football clubs
+-- ============================================================
+INSERT INTO players (first_name, last_name, email, date_of_birth, gender, team_id, jersey_number, position, status) VALUES
+('Alisson', 'Becker', 'alisson.becker@seed.msms.local', '1992-10-02', 'Male', 16, 1, 'Goalkeeper', 'active'),
+('Virgil', 'van Dijk', 'virgil.vandijk@seed.msms.local', '1991-07-08', 'Male', 16, 4, 'Defender', 'active'),
+('Trent', 'Alexander-Arnold', 'trent.alexander-arnold@seed.msms.local', '1998-10-07', 'Male', 16, 66, 'Defender', 'active'),
+('Alexis', 'Mac Allister', 'alexis.macallister@seed.msms.local', '1998-12-24', 'Male', 16, 10, 'Midfielder', 'active'),
+('Dominik', 'Szoboszlai', 'dominik.szoboszlai@seed.msms.local', '2000-10-25', 'Male', 16, 8, 'Midfielder', 'active'),
+('Mohamed', 'Salah', 'mohamed.salah@seed.msms.local', '1992-06-15', 'Male', 16, 11, 'Forward', 'active'),
+('Luis', 'Diaz', 'luis.diaz@seed.msms.local', '1997-01-13', 'Male', 16, 7, 'Forward', 'active'),
+
+('Andre', 'Onana', 'andre.onana@seed.msms.local', '1996-04-02', 'Male', 17, 24, 'Goalkeeper', 'active'),
+('Lisandro', 'Martinez', 'lisandro.martinez@seed.msms.local', '1998-01-18', 'Male', 17, 6, 'Defender', 'active'),
+('Bruno', 'Fernandes', 'bruno.fernandes@seed.msms.local', '1994-09-08', 'Male', 17, 8, 'Midfielder', 'active'),
+('Kobbie', 'Mainoo', 'kobbie.mainoo@seed.msms.local', '2005-04-19', 'Male', 17, 37, 'Midfielder', 'active'),
+('Amad', 'Diallo', 'amad.diallo@seed.msms.local', '2002-07-11', 'Male', 17, 16, 'Forward', 'active'),
+('Alejandro', 'Garnacho', 'alejandro.garnacho@seed.msms.local', '2004-07-01', 'Male', 17, 17, 'Forward', 'active'),
+('Rasmus', 'Hojlund', 'rasmus.hojlund@seed.msms.local', '2003-02-04', 'Male', 17, 9, 'Forward', 'active'),
+
+('Ederson', 'Moraes', 'ederson.moraes@seed.msms.local', '1993-08-17', 'Male', 18, 31, 'Goalkeeper', 'active'),
+('Ruben', 'Dias', 'ruben.dias@seed.msms.local', '1997-05-14', 'Male', 18, 3, 'Defender', 'active'),
+('Rodri', 'Hernandez', 'rodri.hernandez@seed.msms.local', '1996-06-22', 'Male', 18, 16, 'Midfielder', 'active'),
+('Kevin', 'De Bruyne', 'kevin.debruyne@seed.msms.local', '1991-06-28', 'Male', 18, 17, 'Midfielder', 'active'),
+('Bernardo', 'Silva', 'bernardo.silva@seed.msms.local', '1994-08-10', 'Male', 18, 20, 'Midfielder', 'active'),
+('Phil', 'Foden', 'phil.foden@seed.msms.local', '2000-05-28', 'Male', 18, 47, 'Forward', 'active'),
+('Erling', 'Haaland', 'erling.haaland@seed.msms.local', '2000-07-21', 'Male', 18, 9, 'Forward', 'active'),
+
+('Robert', 'Sanchez', 'robert.sanchez@seed.msms.local', '1997-11-18', 'Male', 19, 1, 'Goalkeeper', 'active'),
+('Levi', 'Colwill', 'levi.colwill@seed.msms.local', '2003-02-26', 'Male', 19, 6, 'Defender', 'active'),
+('Reece', 'James', 'reece.james@seed.msms.local', '1999-12-08', 'Male', 19, 24, 'Defender', 'active'),
+('Moises', 'Caicedo', 'moises.caicedo@seed.msms.local', '2001-11-02', 'Male', 19, 25, 'Midfielder', 'active'),
+('Enzo', 'Fernandez', 'enzo.fernandez@seed.msms.local', '2001-01-17', 'Male', 19, 8, 'Midfielder', 'active'),
+('Cole', 'Palmer', 'cole.palmer@seed.msms.local', '2002-05-06', 'Male', 19, 20, 'Forward', 'active'),
+('Nicolas', 'Jackson', 'nicolas.jackson@seed.msms.local', '2001-06-20', 'Male', 19, 15, 'Forward', 'active'),
+
+('David', 'Raya', 'david.raya@seed.msms.local', '1995-09-15', 'Male', 20, 22, 'Goalkeeper', 'active'),
+('William', 'Saliba', 'william.saliba@seed.msms.local', '2001-03-24', 'Male', 20, 2, 'Defender', 'active'),
+('Gabriel', 'Magalhaes', 'gabriel.magalhaes@seed.msms.local', '1997-12-19', 'Male', 20, 6, 'Defender', 'active'),
+('Declan', 'Rice', 'declan.rice@seed.msms.local', '1999-01-14', 'Male', 20, 41, 'Midfielder', 'active'),
+('Martin', 'Odegaard', 'martin.odegaard@seed.msms.local', '1998-12-17', 'Male', 20, 8, 'Midfielder', 'active'),
+('Bukayo', 'Saka', 'bukayo.saka@seed.msms.local', '2001-09-05', 'Male', 20, 7, 'Forward', 'active'),
+('Kai', 'Havertz', 'kai.havertz@seed.msms.local', '1999-06-11', 'Male', 20, 29, 'Forward', 'active'),
+
+('Thibaut', 'Courtois', 'thibaut.courtois@seed.msms.local', '1992-05-11', 'Male', 21, 1, 'Goalkeeper', 'active'),
+('Antonio', 'Rudiger', 'antonio.rudiger@seed.msms.local', '1993-03-03', 'Male', 21, 22, 'Defender', 'active'),
+('Federico', 'Valverde', 'federico.valverde@seed.msms.local', '1998-07-22', 'Male', 21, 8, 'Midfielder', 'active'),
+('Jude', 'Bellingham', 'jude.bellingham@seed.msms.local', '2003-06-29', 'Male', 21, 5, 'Midfielder', 'active'),
+('Vinicius', 'Junior', 'vinicius.junior@seed.msms.local', '2000-07-12', 'Male', 21, 7, 'Forward', 'active'),
+('Rodrygo', 'Goes', 'rodrygo.goes@seed.msms.local', '2001-01-09', 'Male', 21, 11, 'Forward', 'active'),
+('Kylian', 'Mbappe', 'kylian.mbappe@seed.msms.local', '1998-12-20', 'Male', 21, 9, 'Forward', 'active'),
+
+('Marc-Andre', 'ter Stegen', 'marc-andre.terstegen@seed.msms.local', '1992-04-30', 'Male', 22, 1, 'Goalkeeper', 'active'),
+('Ronald', 'Araujo', 'ronald.araujo@seed.msms.local', '1999-03-07', 'Male', 22, 4, 'Defender', 'active'),
+('Pedri', 'Gonzalez', 'pedri.gonzalez@seed.msms.local', '2002-11-25', 'Male', 22, 8, 'Midfielder', 'active'),
+('Frenkie', 'de Jong', 'frenkie.dejong@seed.msms.local', '1997-05-12', 'Male', 22, 21, 'Midfielder', 'active'),
+('Lamine', 'Yamal', 'lamine.yamal@seed.msms.local', '2007-07-13', 'Male', 22, 19, 'Forward', 'active'),
+('Raphinha', 'Bellos', 'raphinha.bellos@seed.msms.local', '1996-12-14', 'Male', 22, 11, 'Forward', 'active'),
+('Robert', 'Lewandowski', 'robert.lewandowski@seed.msms.local', '1988-08-21', 'Male', 22, 9, 'Forward', 'active'),
+
+('Jan', 'Oblak', 'jan.oblak@seed.msms.local', '1993-01-07', 'Male', 23, 13, 'Goalkeeper', 'active'),
+('Jose Maria', 'Gimenez', 'josemaria.gimenez@seed.msms.local', '1995-01-20', 'Male', 23, 2, 'Defender', 'active'),
+('Koke', 'Resurreccion', 'koke.resurreccion@seed.msms.local', '1992-01-08', 'Male', 23, 6, 'Midfielder', 'active'),
+('Rodrigo', 'De Paul', 'rodrigo.depaul@seed.msms.local', '1994-05-24', 'Male', 23, 5, 'Midfielder', 'active'),
+('Antoine', 'Griezmann', 'antoine.griezmann@seed.msms.local', '1991-03-21', 'Male', 23, 7, 'Forward', 'active'),
+('Julian', 'Alvarez', 'julian.alvarez@seed.msms.local', '2000-01-31', 'Male', 23, 19, 'Forward', 'active'),
+('Alexander', 'Sorloth', 'alexander.sorloth@seed.msms.local', '1995-12-05', 'Male', 23, 9, 'Forward', 'active'),
+
+('Paulo', 'Gazzaniga', 'paulo.gazzaniga@seed.msms.local', '1992-01-02', 'Male', 24, 13, 'Goalkeeper', 'active'),
+('Daley', 'Blind', 'daley.blind@seed.msms.local', '1990-03-09', 'Male', 24, 17, 'Defender', 'active'),
+('Miguel', 'Gutierrez', 'miguel.gutierrez@seed.msms.local', '2001-07-27', 'Male', 24, 3, 'Defender', 'active'),
+('Yangel', 'Herrera', 'yangel.herrera@seed.msms.local', '1998-01-07', 'Male', 24, 21, 'Midfielder', 'active'),
+('Ivan', 'Martin', 'ivan.martin@seed.msms.local', '1999-02-14', 'Male', 24, 23, 'Midfielder', 'active'),
+('Viktor', 'Tsygankov', 'viktor.tsygankov@seed.msms.local', '1997-11-15', 'Male', 24, 8, 'Forward', 'active'),
+('Cristhian', 'Stuani', 'cristhian.stuani@seed.msms.local', '1986-10-12', 'Male', 24, 7, 'Forward', 'active'),
+
+('Adrian', 'San Miguel', 'adrian.sanmiguel@seed.msms.local', '1987-01-03', 'Male', 25, 13, 'Goalkeeper', 'active'),
+('Marc', 'Bartra', 'marc.bartra@seed.msms.local', '1991-01-15', 'Male', 25, 5, 'Defender', 'active'),
+('Johnny', 'Cardoso', 'johnny.cardoso@seed.msms.local', '2001-09-20', 'Male', 25, 4, 'Midfielder', 'active'),
+('Isco', 'Alarcon', 'isco.alarcon@seed.msms.local', '1992-04-21', 'Male', 25, 22, 'Midfielder', 'active'),
+('Giovani', 'Lo Celso', 'giovani.locelso@seed.msms.local', '1996-04-09', 'Male', 25, 20, 'Midfielder', 'active'),
+('Aitor', 'Ruibal', 'aitor.ruibal@seed.msms.local', '1996-03-22', 'Male', 25, 24, 'Forward', 'active'),
+('Chimy', 'Avila', 'chimy.avila@seed.msms.local', '1994-02-06', 'Male', 25, 9, 'Forward', 'active'),
+
+('Manuel', 'Neuer', 'manuel.neuer@seed.msms.local', '1986-03-27', 'Male', 26, 1, 'Goalkeeper', 'active'),
+('Dayot', 'Upamecano', 'dayot.upamecano@seed.msms.local', '1998-10-27', 'Male', 26, 2, 'Defender', 'active'),
+('Joshua', 'Kimmich', 'joshua.kimmich@seed.msms.local', '1995-02-08', 'Male', 26, 6, 'Midfielder', 'active'),
+('Jamal', 'Musiala', 'jamal.musiala@seed.msms.local', '2003-02-26', 'Male', 26, 42, 'Midfielder', 'active'),
+('Thomas', 'Muller', 'thomas.muller@seed.msms.local', '1989-09-13', 'Male', 26, 25, 'Forward', 'active'),
+('Harry', 'Kane', 'harry.kane@seed.msms.local', '1993-07-28', 'Male', 26, 9, 'Forward', 'active'),
+('Alphonso', 'Davies', 'alphonso.davies@seed.msms.local', '2000-11-02', 'Male', 26, 19, 'Defender', 'active'),
+
+('Gregor', 'Kobel', 'gregor.kobel@seed.msms.local', '1997-12-06', 'Male', 27, 1, 'Goalkeeper', 'active'),
+('Nico', 'Schlotterbeck', 'nico.schlotterbeck@seed.msms.local', '1999-12-01', 'Male', 27, 4, 'Defender', 'active'),
+('Emre', 'Can', 'emre.can@seed.msms.local', '1994-01-12', 'Male', 27, 23, 'Midfielder', 'active'),
+('Julian', 'Brandt', 'julian.brandt@seed.msms.local', '1996-05-02', 'Male', 27, 10, 'Midfielder', 'active'),
+('Karim', 'Adeyemi', 'karim.adeyemi@seed.msms.local', '2002-01-18', 'Male', 27, 27, 'Forward', 'active'),
+('Serhou', 'Guirassy', 'serhou.guirassy@seed.msms.local', '1996-03-12', 'Male', 27, 9, 'Forward', 'active'),
+('Jamie', 'Bynoe-Gittens', 'jamie.bynoe-gittens@seed.msms.local', '2004-08-08', 'Male', 27, 43, 'Forward', 'active'),
+
+('Lukas', 'Hradecky', 'lukas.hradecky@seed.msms.local', '1989-11-24', 'Male', 28, 1, 'Goalkeeper', 'active'),
+('Jonathan', 'Tah', 'jonathan.tah@seed.msms.local', '1996-02-11', 'Male', 28, 4, 'Defender', 'active'),
+('Granit', 'Xhaka', 'granit.xhaka@seed.msms.local', '1992-09-27', 'Male', 28, 34, 'Midfielder', 'active'),
+('Jeremie', 'Frimpong', 'jeremie.frimpong@seed.msms.local', '2000-12-10', 'Male', 28, 30, 'Defender', 'active'),
+('Florian', 'Wirtz', 'florian.wirtz@seed.msms.local', '2003-05-03', 'Male', 28, 10, 'Midfielder', 'active'),
+('Alex', 'Grimaldo', 'alex.grimaldo@seed.msms.local', '1995-09-20', 'Male', 28, 20, 'Defender', 'active'),
+('Patrik', 'Schick', 'patrik.schick@seed.msms.local', '1996-01-24', 'Male', 28, 14, 'Forward', 'active'),
+
+('Peter', 'Gulacsi', 'peter.gulacsi@seed.msms.local', '1990-05-06', 'Male', 29, 1, 'Goalkeeper', 'active'),
+('Willi', 'Orban', 'willi.orban@seed.msms.local', '1992-11-03', 'Male', 29, 4, 'Defender', 'active'),
+('David', 'Raum', 'david.raum@seed.msms.local', '1998-04-22', 'Male', 29, 22, 'Defender', 'active'),
+('Amadou', 'Haidara', 'amadou.haidara@seed.msms.local', '1998-01-31', 'Male', 29, 8, 'Midfielder', 'active'),
+('Xavi', 'Simons', 'xavi.simons@seed.msms.local', '2003-04-21', 'Male', 29, 10, 'Midfielder', 'active'),
+('Lois', 'Openda', 'lois.openda@seed.msms.local', '2000-02-16', 'Male', 29, 11, 'Forward', 'active'),
+('Benjamin', 'Sesko', 'benjamin.sesko@seed.msms.local', '2003-05-31', 'Male', 29, 30, 'Forward', 'active'),
+
+('Alexander', 'Nubel', 'alexander.nubel@seed.msms.local', '1996-09-30', 'Male', 30, 33, 'Goalkeeper', 'active'),
+('Maximilian', 'Mittelstadt', 'maximilian.mittelstadt@seed.msms.local', '1997-03-18', 'Male', 30, 7, 'Defender', 'active'),
+('Atakan', 'Karazor', 'atakan.karazor@seed.msms.local', '1996-10-13', 'Male', 30, 16, 'Midfielder', 'active'),
+('Angelo', 'Stiller', 'angelo.stiller@seed.msms.local', '2001-04-04', 'Male', 30, 6, 'Midfielder', 'active'),
+('Enzo', 'Millot', 'enzo.millot@seed.msms.local', '2002-07-17', 'Male', 30, 8, 'Midfielder', 'active'),
+('Chris', 'Fuhrich', 'chris.fuhrich@seed.msms.local', '1998-01-09', 'Male', 30, 27, 'Forward', 'active'),
+('Deniz', 'Undav', 'deniz.undav@seed.msms.local', '1996-07-19', 'Male', 30, 26, 'Forward', 'active');
+
+INSERT INTO players (first_name, last_name, email, date_of_birth, gender, team_id, jersey_number, position, status) VALUES
+('Novak', 'Djokovic', 'novak.djokovic@seed.msms.local', '1987-05-22', 'Male', 31, 1, 'Singles Player', 'active'),
+('Carlos', 'Alcaraz', 'carlos.alcaraz@seed.msms.local', '2003-05-05', 'Male', 32, 1, 'Singles Player', 'active'),
+('Jannik', 'Sinner', 'jannik.sinner@seed.msms.local', '2001-08-16', 'Male', 33, 1, 'Singles Player', 'active'),
+('Iga', 'Swiatek', 'iga.swiatek@seed.msms.local', '2001-05-31', 'Female', 34, 1, 'Singles Player', 'active'),
+('Coco', 'Gauff', 'coco.gauff@seed.msms.local', '2004-03-13', 'Female', 35, 1, 'Singles Player', 'active'),
+('Lakshya', 'Sen', 'lakshya.sen@seed.msms.local', '2001-08-16', 'Male', 36, 1, 'Singles Player', 'active'),
+('Anders', 'Antonsen', 'anders.antonsen@seed.msms.local', '1997-04-27', 'Male', 37, 1, 'Singles Player', 'active'),
+('Anthony', 'Ginting', 'anthony.ginting@seed.msms.local', '1996-10-20', 'Male', 38, 1, 'Singles Player', 'active'),
+('Shi', 'Yuqi', 'shi.yuqi@seed.msms.local', '1996-02-28', 'Male', 39, 1, 'Singles Player', 'active'),
+('An', 'Se-young', 'an.seyoung@seed.msms.local', '2002-02-05', 'Female', 40, 1, 'Singles Player', 'active');
+
+-- ============================================================
+-- EVENTS AND TEAM REGISTRATION
 -- ============================================================
 INSERT INTO events (name, sport_id, event_type, format, start_date, end_date, status, description) VALUES
-('Premier Cricket League 2026',    1, 'league',      'round-robin',   '2026-03-01', '2026-05-30', 'ongoing',   'Top-tier T20 cricket league with round-robin format'),
-('Champions Football Cup 2026',    2, 'tournament',  'knockout',      '2026-04-01', '2026-06-15', 'ongoing',   'Elite football tournament in knockout format'),
-('Grand Slam Tennis Open 2026',    3, 'championship','group+knockout','2026-03-15', '2026-04-15', 'ongoing',   'Premier tennis championship event'),
-('National Badminton Trophy 2026', 4, 'tournament',  'knockout',      '2026-04-01', '2026-04-30', 'upcoming',  'National-level badminton knockout tournament');
+('Indian Premier League 2026', 1, 'league', 'round-robin', '2026-03-20', '2026-05-26', 'ongoing', 'Franchise T20 league featuring all ten IPL teams.'),
+('ICC Men''s T20 World Cup 2026', 1, 'tournament', 'group+knockout', '2026-06-04', '2026-06-30', 'upcoming', 'International T20 world championship featuring leading cricket nations.'),
+('Premier League 2025-26', 2, 'league', 'round-robin', '2025-08-15', '2026-05-24', 'ongoing', 'England''s top-flight league season.'),
+('LaLiga 2025-26', 2, 'league', 'round-robin', '2025-08-16', '2026-05-24', 'ongoing', 'Spain''s top-flight league season.'),
+('Bundesliga 2025-26', 2, 'league', 'round-robin', '2025-08-22', '2026-05-16', 'ongoing', 'Germany''s top-flight league season.'),
+('UEFA Champions League 2025-26', 2, 'tournament', 'group+knockout', '2025-09-16', '2026-05-30', 'ongoing', 'Europe''s premier club competition.'),
+('ATP National Showcase 2026', 3, 'championship', 'group+knockout', '2026-04-05', '2026-04-20', 'ongoing', 'Compact showcase featuring five elite tennis stars through national teams.'),
+('BWF National Showcase 2026', 4, 'championship', 'group+knockout', '2026-04-07', '2026-04-21', 'ongoing', 'Compact showcase featuring five elite badminton stars through national teams.');
 
--- ============================================================
--- EVENT_TEAMS (Register teams to their tournaments)
--- ============================================================
 INSERT INTO event_teams (event_id, team_id, seed_rank) VALUES
-(1, 1, 1),   -- Royal Strikers in Cricket League (seed 1)
-(1, 2, 2),   -- Thunder Lions in Cricket League (seed 2)
-(2, 3, 1),   -- Phoenix FC in Football Cup (seed 1)
-(2, 4, 2),   -- Storm United in Football Cup (seed 2)
-(3, 5, 1),   -- Ace Elite in Tennis Open (seed 1)
-(3, 6, 2),   -- Net Blazers in Tennis Open (seed 2)
-(4, 7, 1),   -- Shuttle Kings in Badminton Trophy (seed 1)
-(4, 8, 2);   -- Smash Warriors in Badminton Trophy (seed 2)
+(1, 1, 1), (1, 2, 2), (1, 3, 3), (1, 4, 4), (1, 5, 5), (1, 6, 6), (1, 7, 7), (1, 8, 8), (1, 9, 9), (1, 10, 10),
+(2, 11, 1), (2, 12, 2), (2, 13, 3), (2, 14, 4), (2, 15, 5),
+(3, 16, 1), (3, 17, 2), (3, 18, 3), (3, 19, 4), (3, 20, 5),
+(4, 21, 1), (4, 22, 2), (4, 23, 3), (4, 24, 4), (4, 25, 5),
+(5, 26, 1), (5, 27, 2), (5, 28, 3), (5, 29, 4), (5, 30, 5),
+(6, 16, 1), (6, 18, 2), (6, 20, 3), (6, 21, 4), (6, 22, 5), (6, 23, 6), (6, 26, 7), (6, 27, 8),
+(7, 31, 1), (7, 32, 2), (7, 33, 3), (7, 34, 4), (7, 35, 5),
+(8, 36, 1), (8, 37, 2), (8, 38, 3), (8, 39, 4), (8, 40, 5);
+-- ============================================================
+-- PLAYERS
+-- Cricket club players (IPL)
+-- ============================================================
+INSERT INTO players (first_name, last_name, email, date_of_birth, gender, team_id, jersey_number, position, status) VALUES
+('Rohit', 'Sharma', 'rohit.sharma@seed.msms.local', '1987-04-30', 'Male', 1, 45, 'Batsman', 'active'),
+('Suryakumar', 'Yadav', 'suryakumar.yadav@seed.msms.local', '1990-09-14', 'Male', 1, 63, 'Batsman', 'active'),
+('Hardik', 'Pandya', 'hardik.pandya@seed.msms.local', '1993-10-11', 'Male', 1, 33, 'All-Rounder', 'active'),
+('Jasprit', 'Bumrah', 'jasprit.bumrah@seed.msms.local', '1993-12-06', 'Male', 1, 93, 'Bowler', 'active'),
+('Tilak', 'Varma', 'tilak.varma@seed.msms.local', '2002-11-08', 'Male', 1, 9, 'Batsman', 'active'),
+('Trent', 'Boult', 'trent.boult@seed.msms.local', '1989-07-22', 'Male', 1, 18, 'Bowler', 'active'),
+('Ryan', 'Rickelton', 'ryan.rickelton@seed.msms.local', '1996-07-11', 'Male', 1, 44, 'Wicket-Keeper', 'active'),
+
+('Ruturaj', 'Gaikwad', 'ruturaj.gaikwad@seed.msms.local', '1997-01-31', 'Male', 2, 31, 'Batsman', 'active'),
+('Devon', 'Conway', 'devon.conway@seed.msms.local', '1991-07-08', 'Male', 2, 88, 'Wicket-Keeper', 'active'),
+('Ravindra', 'Jadeja', 'ravindra.jadeja@seed.msms.local', '1988-12-06', 'Male', 2, 8, 'All-Rounder', 'active'),
+('MS', 'Dhoni', 'ms.dhoni@seed.msms.local', '1981-07-07', 'Male', 2, 7, 'Wicket-Keeper', 'active'),
+('Shivam', 'Dube', 'shivam.dube@seed.msms.local', '1993-06-26', 'Male', 2, 25, 'All-Rounder', 'active'),
+('Noor', 'Ahmad', 'noor.ahmad@seed.msms.local', '2005-01-03', 'Male', 2, 10, 'Bowler', 'active'),
+('Ravichandran', 'Ashwin', 'ravichandran.ashwin@seed.msms.local', '1986-09-17', 'Male', 2, 99, 'Bowler', 'active'),
+
+('Virat', 'Kohli', 'virat.kohli@seed.msms.local', '1988-11-05', 'Male', 3, 18, 'Batsman', 'active'),
+('Rajat', 'Patidar', 'rajat.patidar@seed.msms.local', '1993-06-01', 'Male', 3, 97, 'Batsman', 'active'),
+('Phil', 'Salt', 'phil.salt@seed.msms.local', '1996-08-28', 'Male', 3, 28, 'Wicket-Keeper', 'active'),
+('Liam', 'Livingstone', 'liam.livingstone@seed.msms.local', '1993-08-04', 'Male', 3, 23, 'All-Rounder', 'active'),
+('Krunal', 'Pandya', 'krunal.pandya@seed.msms.local', '1991-03-24', 'Male', 3, 24, 'All-Rounder', 'active'),
+('Josh', 'Hazlewood', 'josh.hazlewood@seed.msms.local', '1991-01-08', 'Male', 3, 38, 'Bowler', 'active'),
+('Bhuvneshwar', 'Kumar', 'bhuvneshwar.kumar@seed.msms.local', '1990-02-05', 'Male', 3, 15, 'Bowler', 'active'),
+
+('Ajinkya', 'Rahane', 'ajinkya.rahane@seed.msms.local', '1988-06-06', 'Male', 4, 3, 'Batsman', 'active'),
+('Sunil', 'Narine', 'sunil.narine@seed.msms.local', '1988-05-26', 'Male', 4, 74, 'All-Rounder', 'active'),
+('Andre', 'Russell', 'andre.russell@seed.msms.local', '1988-04-29', 'Male', 4, 12, 'All-Rounder', 'active'),
+('Rinku', 'Singh', 'rinku.singh@seed.msms.local', '1997-10-12', 'Male', 4, 35, 'Batsman', 'active'),
+('Varun', 'Chakravarthy', 'varun.chakravarthy@seed.msms.local', '1991-08-29', 'Male', 4, 29, 'Bowler', 'active'),
+('Quinton', 'de Kock', 'quinton.dekock@seed.msms.local', '1992-12-17', 'Male', 4, 47, 'Wicket-Keeper', 'active'),
+('Harshit', 'Rana', 'harshit.rana@seed.msms.local', '2001-12-22', 'Male', 4, 22, 'Bowler', 'active'),
+
+('Travis', 'Head', 'travis.head@seed.msms.local', '1993-12-29', 'Male', 5, 62, 'Batsman', 'active'),
+('Abhishek', 'Sharma', 'abhishek.sharma@seed.msms.local', '2000-09-04', 'Male', 5, 4, 'All-Rounder', 'active'),
+('Heinrich', 'Klaasen', 'heinrich.klaasen@seed.msms.local', '1991-07-30', 'Male', 5, 45, 'Wicket-Keeper', 'active'),
+('Pat', 'Cummins', 'pat.cummins@seed.msms.local', '1993-05-08', 'Male', 5, 30, 'Bowler', 'active'),
+('Mohammed', 'Shami', 'mohammed.shami@seed.msms.local', '1990-09-03', 'Male', 5, 11, 'Bowler', 'active'),
+('Nitish', 'Reddy', 'nitish.reddy@seed.msms.local', '2003-05-26', 'Male', 5, 8, 'All-Rounder', 'active'),
+('Ishan', 'Kishan', 'ishan.kishan@seed.msms.local', '1998-07-18', 'Male', 5, 32, 'Wicket-Keeper', 'active'),
+
+('Sanju', 'Samson', 'sanju.samson@seed.msms.local', '1994-11-11', 'Male', 6, 11, 'Wicket-Keeper', 'active'),
+('Yashasvi', 'Jaiswal', 'yashasvi.jaiswal@seed.msms.local', '2001-12-28', 'Male', 6, 64, 'Batsman', 'active'),
+('Riyan', 'Parag', 'riyan.parag@seed.msms.local', '2001-11-10', 'Male', 6, 3, 'All-Rounder', 'active'),
+('Dhruv', 'Jurel', 'dhruv.jurel@seed.msms.local', '2001-01-21', 'Male', 6, 21, 'Wicket-Keeper', 'active'),
+('Jofra', 'Archer', 'jofra.archer@seed.msms.local', '1995-04-01', 'Male', 6, 22, 'Bowler', 'active'),
+('Wanindu', 'Hasaranga', 'wanindu.hasaranga@seed.msms.local', '1997-07-29', 'Male', 6, 49, 'All-Rounder', 'active'),
+('Sandeep', 'Sharma', 'sandeep.sharma@seed.msms.local', '1993-05-18', 'Male', 6, 66, 'Bowler', 'active'),
+
+('KL', 'Rahul', 'kl.rahul@seed.msms.local', '1992-04-18', 'Male', 7, 1, 'Wicket-Keeper', 'active'),
+('Axar', 'Patel', 'axar.patel@seed.msms.local', '1994-01-20', 'Male', 7, 20, 'All-Rounder', 'active'),
+('Kuldeep', 'Yadav', 'kuldeep.yadav@seed.msms.local', '1994-12-14', 'Male', 7, 23, 'Bowler', 'active'),
+('Mitchell', 'Starc', 'mitchell.starc@seed.msms.local', '1990-01-30', 'Male', 7, 56, 'Bowler', 'active'),
+('Tristan', 'Stubbs', 'tristan.stubbs@seed.msms.local', '2000-08-14', 'Male', 7, 30, 'Batsman', 'active'),
+('Faf', 'du Plessis', 'faf.duplessis@seed.msms.local', '1984-07-13', 'Male', 7, 18, 'Batsman', 'active'),
+('Jake', 'Fraser-McGurk', 'jake.fraser-mcgurk@seed.msms.local', '2002-04-11', 'Male', 7, 17, 'Batsman', 'active'),
+
+('Shreyas', 'Iyer', 'shreyas.iyer@seed.msms.local', '1994-12-06', 'Male', 8, 41, 'Batsman', 'active'),
+('Arshdeep', 'Singh', 'arshdeep.singh@seed.msms.local', '1999-02-05', 'Male', 8, 2, 'Bowler', 'active'),
+('Yuzvendra', 'Chahal', 'yuzvendra.chahal@seed.msms.local', '1990-07-23', 'Male', 8, 3, 'Bowler', 'active'),
+('Marcus', 'Stoinis', 'marcus.stoinis@seed.msms.local', '1989-08-16', 'Male', 8, 17, 'All-Rounder', 'active'),
+('Glenn', 'Maxwell', 'glenn.maxwell@seed.msms.local', '1988-10-14', 'Male', 8, 32, 'All-Rounder', 'active'),
+('Prabhsimran', 'Singh', 'prabhsimran.singh@seed.msms.local', '2000-08-10', 'Male', 8, 84, 'Wicket-Keeper', 'active'),
+('Marco', 'Jansen', 'marco.jansen@seed.msms.local', '2000-05-01', 'Male', 8, 70, 'All-Rounder', 'active'),
+
+('Shubman', 'Gill', 'shubman.gill@seed.msms.local', '1999-09-08', 'Male', 9, 77, 'Batsman', 'active'),
+('Rashid', 'Khan', 'rashid.khan@seed.msms.local', '1998-09-20', 'Male', 9, 19, 'Bowler', 'active'),
+('Sai', 'Sudharsan', 'sai.sudharsan@seed.msms.local', '2001-10-15', 'Male', 9, 66, 'Batsman', 'active'),
+('Jos', 'Buttler', 'jos.buttler@seed.msms.local', '1990-09-08', 'Male', 9, 63, 'Wicket-Keeper', 'active'),
+('Mohammed', 'Siraj', 'mohammed.siraj@seed.msms.local', '1994-03-13', 'Male', 9, 13, 'Bowler', 'active'),
+('Rahul', 'Tewatia', 'rahul.tewatia@seed.msms.local', '1993-05-20', 'Male', 9, 9, 'All-Rounder', 'active'),
+('Kagiso', 'Rabada', 'kagiso.rabada@seed.msms.local', '1995-05-25', 'Male', 9, 25, 'Bowler', 'active'),
+
+('Rishabh', 'Pant', 'rishabh.pant@seed.msms.local', '1997-10-04', 'Male', 10, 17, 'Wicket-Keeper', 'active'),
+('Nicholas', 'Pooran', 'nicholas.pooran@seed.msms.local', '1995-10-02', 'Male', 10, 29, 'Wicket-Keeper', 'active'),
+('Mitchell', 'Marsh', 'mitchell.marsh@seed.msms.local', '1991-10-20', 'Male', 10, 8, 'All-Rounder', 'active'),
+('Aiden', 'Markram', 'aiden.markram@seed.msms.local', '1994-10-04', 'Male', 10, 4, 'All-Rounder', 'active'),
+('Ravi', 'Bishnoi', 'ravi.bishnoi@seed.msms.local', '2000-09-05', 'Male', 10, 56, 'Bowler', 'active'),
+('Avesh', 'Khan', 'avesh.khan@seed.msms.local', '1996-12-13', 'Male', 10, 65, 'Bowler', 'active'),
+('David', 'Miller', 'david.miller@seed.msms.local', '1989-06-10', 'Male', 10, 10, 'Batsman', 'active');
+
+INSERT INTO players (first_name, last_name, email, date_of_birth, gender, team_id, jersey_number, position, status) VALUES
+('Adil', 'Rashid', 'adil.rashid@seed.msms.local', '1988-02-17', 'Male', 13, 95, 'Bowler', 'active'),
+('Babar', 'Azam', 'babar.azam@seed.msms.local', '1994-10-15', 'Male', 14, 56, 'Batsman', 'active'),
+('Mohammad', 'Rizwan', 'mohammad.rizwan@seed.msms.local', '1992-06-01', 'Male', 14, 16, 'Wicket-Keeper', 'active'),
+('Shaheen', 'Afridi', 'shaheen.afridi@seed.msms.local', '2000-04-06', 'Male', 14, 10, 'Bowler', 'active'),
+('Haris', 'Rauf', 'haris.rauf@seed.msms.local', '1993-11-07', 'Male', 14, 97, 'Bowler', 'active'),
+('Shadab', 'Khan', 'shadab.khan@seed.msms.local', '1998-10-04', 'Male', 14, 7, 'All-Rounder', 'active');
 
 -- ============================================================
--- MATCHES (8 matches — 2 per sport: 1 completed + 1 upcoming each)
+-- EXTRA MEMBERSHIPS
+-- Add country-team links for shared cricket players.
+-- Club memberships are auto-created later from players.team_id.
+-- ============================================================
+INSERT INTO player_team_memberships (player_id, team_id, jersey_number, position, membership_type, is_active, start_date, notes) VALUES
+((SELECT player_id FROM players WHERE email = 'rohit.sharma@seed.msms.local'), 11, 45, 'Batsman', 'country', 1, '2024-01-01', 'India T20 core group'),
+((SELECT player_id FROM players WHERE email = 'virat.kohli@seed.msms.local'), 11, 18, 'Batsman', 'country', 1, '2024-01-01', 'India T20 core group'),
+((SELECT player_id FROM players WHERE email = 'suryakumar.yadav@seed.msms.local'), 11, 63, 'Batsman', 'country', 1, '2024-01-01', 'India T20 core group'),
+((SELECT player_id FROM players WHERE email = 'hardik.pandya@seed.msms.local'), 11, 33, 'All-Rounder', 'country', 1, '2024-01-01', 'India T20 core group'),
+((SELECT player_id FROM players WHERE email = 'jasprit.bumrah@seed.msms.local'), 11, 93, 'Bowler', 'country', 1, '2024-01-01', 'India T20 core group'),
+((SELECT player_id FROM players WHERE email = 'travis.head@seed.msms.local'), 12, 62, 'Batsman', 'country', 1, '2024-01-01', 'Australia T20 core group'),
+((SELECT player_id FROM players WHERE email = 'pat.cummins@seed.msms.local'), 12, 30, 'Bowler', 'country', 1, '2024-01-01', 'Australia T20 core group'),
+((SELECT player_id FROM players WHERE email = 'mitchell.starc@seed.msms.local'), 12, 56, 'Bowler', 'country', 1, '2024-01-01', 'Australia T20 core group'),
+((SELECT player_id FROM players WHERE email = 'glenn.maxwell@seed.msms.local'), 12, 32, 'All-Rounder', 'country', 1, '2024-01-01', 'Australia T20 core group'),
+((SELECT player_id FROM players WHERE email = 'marcus.stoinis@seed.msms.local'), 12, 17, 'All-Rounder', 'country', 1, '2024-01-01', 'Australia T20 core group'),
+((SELECT player_id FROM players WHERE email = 'jos.buttler@seed.msms.local'), 13, 63, 'Wicket-Keeper', 'country', 1, '2024-01-01', 'England T20 core group'),
+((SELECT player_id FROM players WHERE email = 'phil.salt@seed.msms.local'), 13, 28, 'Wicket-Keeper', 'country', 1, '2024-01-01', 'England T20 core group'),
+((SELECT player_id FROM players WHERE email = 'liam.livingstone@seed.msms.local'), 13, 23, 'All-Rounder', 'country', 1, '2024-01-01', 'England T20 core group'),
+((SELECT player_id FROM players WHERE email = 'jofra.archer@seed.msms.local'), 13, 22, 'Bowler', 'country', 1, '2024-01-01', 'England T20 core group'),
+((SELECT player_id FROM players WHERE email = 'heinrich.klaasen@seed.msms.local'), 15, 45, 'Wicket-Keeper', 'country', 1, '2024-01-01', 'South Africa T20 core group'),
+((SELECT player_id FROM players WHERE email = 'kagiso.rabada@seed.msms.local'), 15, 25, 'Bowler', 'country', 1, '2024-01-01', 'South Africa T20 core group'),
+((SELECT player_id FROM players WHERE email = 'marco.jansen@seed.msms.local'), 15, 70, 'All-Rounder', 'country', 1, '2024-01-01', 'South Africa T20 core group'),
+((SELECT player_id FROM players WHERE email = 'tristan.stubbs@seed.msms.local'), 15, 30, 'Batsman', 'country', 1, '2024-01-01', 'South Africa T20 core group'),
+((SELECT player_id FROM players WHERE email = 'aiden.markram@seed.msms.local'), 15, 4, 'All-Rounder', 'country', 1, '2024-01-01', 'South Africa T20 core group');
+
+-- ============================================================
+-- MATCHES, SCHEDULES, EVENTS, STATS, AND ROSTERS
+-- Match ids are assigned in insert order below.
 -- ============================================================
 INSERT INTO matches (event_id, venue_id, match_date, status, round_name, result_summary) VALUES
--- Cricket matches
-(1, 1, '2026-03-15 14:00:00', 'completed', 'Round 1', 'Royal Strikers won by 25 runs'),
-(1, 2, '2026-04-10 14:00:00', 'scheduled', 'Round 2', NULL),
+(3, 15, '2026-04-06 20:00:00', 'completed', 'Matchweek 31', 'Liverpool won 2-1'),
+(4, 20, '2026-04-07 21:00:00', 'completed', 'Matchweek 30', 'Real Madrid won 3-2'),
+(5, 25, '2026-04-05 18:30:00', 'completed', 'Matchday 28', 'Bayern Munich drew 1-1 with Bayer Leverkusen'),
+(6, 19, '2026-04-09 20:45:00', 'completed', 'Quarter-final', 'Arsenal won 2-0'),
+(1, 1, '2026-03-29 19:30:00', 'completed', 'League Stage', 'Mumbai Indians won by 13 runs'),
+(1, 3, '2026-04-15 19:30:00', 'scheduled', 'League Stage', NULL),
+(2, 9, '2026-06-08 19:30:00', 'completed', 'Group Stage', 'India won by 7 runs'),
+(7, 30, '2026-04-08 17:00:00', 'completed', 'Semifinal', 'Serbia won 2-1 in sets'),
+(7, 32, '2026-04-13 17:00:00', 'scheduled', 'Semifinal', NULL),
+(8, 35, '2026-04-09 18:30:00', 'completed', 'Semifinal', 'India Badminton won 2-1 in games'),
+(8, 37, '2026-04-14 18:30:00', 'scheduled', 'Semifinal', NULL);
 
--- Football matches
-(2, 3, '2026-04-05 18:00:00', 'completed', 'Semifinal', 'Phoenix FC won 3-1'),
-(2, 4, '2026-04-20 18:00:00', 'scheduled', 'Final', NULL),
-
--- Tennis matches
-(3, 5, '2026-03-20 10:00:00', 'completed', 'Group Stage', 'Ace Elite won 2-1 in sets'),
-(3, 5, '2026-04-08 10:00:00', 'scheduled', 'Semifinal', NULL),
-
--- Badminton matches
-(4, 6, '2026-04-05 16:00:00', 'completed', 'Semifinal', 'Shuttle Kings won 2-0 in sets'),
-(4, 6, '2026-04-15 16:00:00', 'scheduled', 'Final', NULL);
-
--- ============================================================
--- MATCH_TEAMS (Link teams to matches with scores)
--- ============================================================
 INSERT INTO match_teams (match_id, team_id, score, is_winner, innings_1_score, innings_2_score, sets_won) VALUES
--- Cricket Match 1: Royal Strikers 185 vs Thunder Lions 160
-(1, 1, 185, 1, 185, NULL, NULL),
-(1, 2, 160, 0, 160, NULL, NULL),
--- Cricket Match 2 (scheduled)
-(2, 1, 0, 0, NULL, NULL, NULL),
-(2, 2, 0, 0, NULL, NULL, NULL),
+(1, 16, 2, 1, NULL, NULL, NULL), (1, 20, 1, 0, NULL, NULL, NULL),
+(2, 21, 3, 1, NULL, NULL, NULL), (2, 22, 2, 0, NULL, NULL, NULL),
+(3, 26, 1, 0, NULL, NULL, NULL), (3, 28, 1, 0, NULL, NULL, NULL),
+(4, 20, 2, 1, NULL, NULL, NULL), (4, 21, 0, 0, NULL, NULL, NULL),
+(5, 1, 187, 1, 187, NULL, NULL), (5, 2, 174, 0, 174, NULL, NULL),
+(6, 3, 0, 0, NULL, NULL, NULL), (6, 4, 0, 0, NULL, NULL, NULL),
+(7, 11, 168, 1, 168, NULL, NULL), (7, 12, 161, 0, 161, NULL, NULL),
+(8, 31, 2, 1, NULL, NULL, 2), (8, 32, 1, 0, NULL, NULL, 1),
+(9, 33, 0, 0, NULL, NULL, NULL), (9, 34, 0, 0, NULL, NULL, NULL),
+(10, 36, 2, 1, NULL, NULL, 2), (10, 37, 1, 0, NULL, NULL, 1),
+(11, 38, 0, 0, NULL, NULL, NULL), (11, 39, 0, 0, NULL, NULL, NULL);
 
--- Football Match 3: Phoenix FC 3 vs Storm United 1
-(3, 3, 3, 1, NULL, NULL, NULL),
-(3, 4, 1, 0, NULL, NULL, NULL),
--- Football Match 4 (scheduled)
-(4, 3, 0, 0, NULL, NULL, NULL),
-(4, 4, 0, 0, NULL, NULL, NULL),
-
--- Tennis Match 5: Ace Elite 2 sets vs Net Blazers 1 set
-(5, 5, 2, 1, NULL, NULL, 2),
-(5, 6, 1, 0, NULL, NULL, 1),
--- Tennis Match 6 (scheduled)
-(6, 5, 0, 0, NULL, NULL, NULL),
-(6, 6, 0, 0, NULL, NULL, NULL),
-
--- Badminton Match 7: Shuttle Kings 2 sets vs Smash Warriors 0 sets
-(7, 7, 2, 1, NULL, NULL, 2),
-(7, 8, 0, 0, NULL, NULL, 0),
--- Badminton Match 8 (scheduled)
-(8, 7, 0, 0, NULL, NULL, NULL),
-(8, 8, 0, 0, NULL, NULL, NULL);
-
--- ============================================================
--- SCHEDULES (scheduling metadata for all matches)
--- ============================================================
 INSERT INTO schedules (match_id, scheduled_time, actual_start_time, actual_end_time, notes) VALUES
-(1, '2026-03-15 14:00:00', '2026-03-15 14:05:00', '2026-03-15 17:30:00', 'Match completed without delays'),
-(2, '2026-04-10 14:00:00', NULL, NULL, 'Upcoming round 2 fixture'),
-(3, '2026-04-05 18:00:00', '2026-04-05 18:02:00', '2026-04-05 19:50:00', 'Exciting semifinal'),
-(4, '2026-04-20 18:00:00', NULL, NULL, 'Upcoming final'),
-(5, '2026-03-20 10:00:00', '2026-03-20 10:10:00', '2026-03-20 12:45:00', 'Three-set thriller'),
-(6, '2026-04-08 10:00:00', NULL, NULL, 'Semifinal matchup'),
-(7, '2026-04-05 16:00:00', '2026-04-05 16:05:00', '2026-04-05 17:15:00', 'Dominant performance by Shuttle Kings'),
-(8, '2026-04-15 16:00:00', NULL, NULL, 'Anticipated final');
+(1, '2026-04-06 20:00:00', '2026-04-06 20:01:00', '2026-04-06 21:54:00', 'Liverpool held on after a strong first hour'),
+(2, '2026-04-07 21:00:00', '2026-04-07 21:03:00', '2026-04-07 22:57:00', 'High-tempo Clasico style fixture'),
+(3, '2026-04-05 18:30:00', '2026-04-05 18:31:00', '2026-04-05 20:23:00', 'Balanced tactical battle'),
+(4, '2026-04-09 20:45:00', '2026-04-09 20:46:00', '2026-04-09 22:39:00', 'Arsenal controlled the second half'),
+(5, '2026-03-29 19:30:00', '2026-03-29 19:33:00', '2026-03-29 23:02:00', 'Strong death bowling from Mumbai'),
+(6, '2026-04-15 19:30:00', NULL, NULL, 'RCB host KKR in a marquee IPL fixture'),
+(7, '2026-06-08 19:30:00', '2026-06-08 19:32:00', '2026-06-08 22:51:00', 'Group-stage night match'),
+(8, '2026-04-08 17:00:00', '2026-04-08 17:04:00', '2026-04-08 19:12:00', 'Three-set contest between elite singles stars'),
+(9, '2026-04-13 17:00:00', NULL, NULL, 'Italy faces Poland in the second semifinal'),
+(10, '2026-04-09 18:30:00', '2026-04-09 18:33:00', '2026-04-09 19:41:00', 'Fast, attacking singles match'),
+(11, '2026-04-14 18:30:00', NULL, NULL, 'Indonesia meets China in the second semifinal');
 
--- ============================================================
--- MATCH_EVENTS (60+ events for completed matches)
--- ============================================================
-
--- CRICKET MATCH 1 (match_id=1): Royal Strikers vs Thunder Lions
--- Royal Strikers batting — some key events
-INSERT INTO match_events (match_id, team_id, player_id, event_type, minute_or_over, ball_in_over, runs_scored, detail) VALUES
-(1, 1, 1,  'run',    1, 1, 4, 'Driven through covers for four'),
-(1, 1, 1,  'run',    1, 2, 1, 'Single to mid-on'),
-(1, 1, 2,  'run',    1, 3, 6, 'Massive six over long-on'),
-(1, 1, 2,  'run',    1, 4, 0, 'Dot ball, good length delivery'),
-(1, 1, 2,  'run',    1, 5, 2, 'Quick double to deep square leg'),
-(1, 1, 1,  'boundary_4', 2, 1, 4, 'Pulled to fine leg boundary'),
-(1, 1, 1,  'run',    2, 2, 1, 'Rotated strike'),
-(1, 1, 2,  'run',    2, 3, 4, 'Flicked off pads for four'),
-(1, 2, 2,  'wicket', 3, 4, 0, 'Caught at slip, bowler: Bhuvneshwar'),
-(1, 1, 3,  'run',    4, 1, 6, 'Lofted straight for six'),
-(1, 1, 3,  'run',    4, 2, 2, 'Pushed through gap on off side'),
-(1, 1, 4,  'run',    5, 1, 4, 'Clean drive through extra cover'),
-(1, 1, 4,  'boundary_6', 5, 3, 6, 'Deposited into the stands'),
-(1, 1, 1,  'run',    6, 1, 2, 'Quick running between wickets'),
-(1, 2, 3,  'wicket', 7, 2, 0, 'LBW, hitting middle stump'),
-(1, 1, 5,  'run',    8, 1, 4, 'Late cut to third man boundary'),
-(1, 1, 5,  'run',    8, 3, 1, 'Nudged to leg side'),
-(1, 1, 1,  'run',    9, 1, 6, 'Tonked over midwicket'),
-(1, 2, 1,  'wicket', 10, 3, 0, 'Bowled through the gate'),
-
--- Thunder Lions batting — key events
-(1, 2, 12, 'run',    1, 1, 4, 'Elegant cover drive'),
-(1, 2, 12, 'run',    1, 3, 2, 'Tucked off the pads'),
-(1, 2, 13, 'run',    2, 1, 6, 'Scooped over fine leg'),
-(1, 2, 13, 'run',    2, 4, 1, 'Single to mid-off'),
-(1, 2, 12, 'run',    3, 1, 4, 'Cut past point'),
-(1, 1, 12, 'wicket', 4, 2, 0, 'Caught behind, bowler: Jasprit'),
-(1, 2, 14, 'run',    5, 1, 2, 'Worked to leg side'),
-(1, 2, 14, 'run',    5, 3, 4, 'Swept fine for four'),
-(1, 1, 13, 'wicket', 6, 5, 0, 'Run out, direct hit from cover'),
-(1, 2, 15, 'run',    7, 1, 1, 'Pushed to cover'),
-(1, 2, 15, 'run',    7, 4, 4, 'Driven through mid-off');
-
--- FOOTBALL MATCH 3 (match_id=3): Phoenix FC 3-1 Storm United
 INSERT INTO match_events (match_id, team_id, player_id, secondary_player_id, event_type, minute_or_over, detail) VALUES
-(3, 3, 30, 28, 'goal',         12, 'Header from corner kick'),
-(3, 3, 29, 30, 'goal',         34, 'Counter-attack finish'),
-(3, 4, 41, 39, 'goal',         52, 'Penalty kick converted'),
-(3, 4, 35, NULL, 'yellow_card', 55, 'Tactical foul on the edge of the box'),
-(3, 3, 29, NULL, 'yellow_card', 62, 'Late tackle in midfield'),
-(3, 3, 31, 29, 'goal',         78, 'Curling shot from outside the box'),
-(3, 4, 37, 40,  'substitution', 65, 'Tactical change, fresh legs'),
-(3, 3, 26, 30,  'substitution', 80, 'Defensive reinforcement');
+(1, 16, (SELECT player_id FROM players WHERE email = 'mohamed.salah@seed.msms.local'), (SELECT player_id FROM players WHERE email = 'dominik.szoboszlai@seed.msms.local'), 'goal', 18, 'Left-foot finish after a cutback'),
+(1, 16, (SELECT player_id FROM players WHERE email = 'luis.diaz@seed.msms.local'), (SELECT player_id FROM players WHERE email = 'alexis.macallister@seed.msms.local'), 'goal', 52, 'Low finish across the goalkeeper'),
+(1, 20, (SELECT player_id FROM players WHERE email = 'bukayo.saka@seed.msms.local'), NULL, 'goal', 76, 'Shot tucked inside the near post'),
+(1, 20, (SELECT player_id FROM players WHERE email = 'declan.rice@seed.msms.local'), NULL, 'yellow_card', 81, 'Late midfield challenge'),
+(2, 21, (SELECT player_id FROM players WHERE email = 'kylian.mbappe@seed.msms.local'), (SELECT player_id FROM players WHERE email = 'jude.bellingham@seed.msms.local'), 'goal', 11, 'Fast break finished from close range'),
+(2, 22, (SELECT player_id FROM players WHERE email = 'robert.lewandowski@seed.msms.local'), NULL, 'goal', 24, 'Poacher finish inside the six-yard box'),
+(2, 21, (SELECT player_id FROM players WHERE email = 'jude.bellingham@seed.msms.local'), NULL, 'goal', 61, 'Late run into the box and composed finish'),
+(2, 22, (SELECT player_id FROM players WHERE email = 'lamine.yamal@seed.msms.local'), (SELECT player_id FROM players WHERE email = 'pedri.gonzalez@seed.msms.local'), 'goal', 73, 'Curled effort from the right side'),
+(2, 21, (SELECT player_id FROM players WHERE email = 'kylian.mbappe@seed.msms.local'), NULL, 'goal', 84, 'Clinical winner on the counter'),
+(3, 26, (SELECT player_id FROM players WHERE email = 'harry.kane@seed.msms.local'), NULL, 'goal', 39, 'Penalty converted calmly'),
+(3, 28, (SELECT player_id FROM players WHERE email = 'florian.wirtz@seed.msms.local'), (SELECT player_id FROM players WHERE email = 'jeremie.frimpong@seed.msms.local'), 'goal', 67, 'Right-foot finish from the edge of the box'),
+(4, 20, (SELECT player_id FROM players WHERE email = 'bukayo.saka@seed.msms.local'), (SELECT player_id FROM players WHERE email = 'martin.odegaard@seed.msms.local'), 'goal', 28, 'One-touch finish from a through ball'),
+(4, 20, (SELECT player_id FROM players WHERE email = 'kai.havertz@seed.msms.local'), (SELECT player_id FROM players WHERE email = 'bukayo.saka@seed.msms.local'), 'goal', 71, 'Header from a clipped cross'),
+(8, 31, (SELECT player_id FROM players WHERE email = 'novak.djokovic@seed.msms.local'), NULL, 'set_won', NULL, 'Won opening set 6-4'),
+(8, 32, (SELECT player_id FROM players WHERE email = 'carlos.alcaraz@seed.msms.local'), NULL, 'set_won', NULL, 'Took second set 7-5'),
+(8, 31, (SELECT player_id FROM players WHERE email = 'novak.djokovic@seed.msms.local'), NULL, 'set_won', NULL, 'Won decider 6-3'),
+(10, 36, (SELECT player_id FROM players WHERE email = 'lakshya.sen@seed.msms.local'), NULL, 'set_won', NULL, 'Won first game 21-18'),
+(10, 37, (SELECT player_id FROM players WHERE email = 'anders.antonsen@seed.msms.local'), NULL, 'set_won', NULL, 'Took second game 21-16'),
+(10, 36, (SELECT player_id FROM players WHERE email = 'lakshya.sen@seed.msms.local'), NULL, 'set_won', NULL, 'Closed the match 21-17');
 
--- TENNIS MATCH 5 (match_id=5): Ace Elite 2-1 Net Blazers (sets)
-INSERT INTO match_events (match_id, team_id, player_id, event_type, set_number, detail) VALUES
-(5, 5, 45, 'set_won',   1, 'Won set 6-4'),
-(5, 6, 48, 'set_won',   2, 'Won set 7-5 in tiebreak'),
-(5, 5, 45, 'set_won',   3, 'Won set 6-3'),
-(5, 5, 45, 'match_won', 3, 'Won the match 2-1 in sets'),
-(5, 5, 45, 'point_won', 1, 'Ace on serve'),
-(5, 5, 45, 'point_won', 1, 'Winner down the line'),
-(5, 6, 48, 'point_won', 1, 'Cross-court backhand winner'),
-(5, 5, 45, 'point_won', 2, 'Drop shot winner'),
-(5, 6, 48, 'point_won', 2, 'Serve and volley point'),
-(5, 5, 45, 'point_won', 3, 'Forehand winner'),
-(5, 6, 48, 'point_won', 3, 'Lob winner');
+INSERT INTO match_events (match_id, team_id, player_id, event_type, minute_or_over, ball_in_over, runs_scored, detail) VALUES
+(5, 1, (SELECT player_id FROM players WHERE email = 'rohit.sharma@seed.msms.local'), 'run', 1, 1, 4, 'Pull shot to the boundary'),
+(5, 1, (SELECT player_id FROM players WHERE email = 'suryakumar.yadav@seed.msms.local'), 'boundary_6', 4, 3, 6, 'Inside-out six over extra cover'),
+(5, 1, (SELECT player_id FROM players WHERE email = 'hardik.pandya@seed.msms.local'), 'run', 18, 5, 6, 'Straight six at the death'),
+(5, 2, (SELECT player_id FROM players WHERE email = 'ruturaj.gaikwad@seed.msms.local'), 'run', 2, 4, 4, 'Punched through point'),
+(5, 2, (SELECT player_id FROM players WHERE email = 'shivam.dube@seed.msms.local'), 'boundary_6', 15, 2, 6, 'Flat six over midwicket'),
+(5, 1, (SELECT player_id FROM players WHERE email = 'jasprit.bumrah@seed.msms.local'), 'wicket', 19, 4, 0, 'Yorker crashes into off stump'),
+(7, 11, (SELECT player_id FROM players WHERE email = 'suryakumar.yadav@seed.msms.local'), 'run', 8, 6, 4, 'Late cut for four'),
+(7, 11, (SELECT player_id FROM players WHERE email = 'hardik.pandya@seed.msms.local'), 'boundary_6', 17, 2, 6, 'Powerful finish over long-on'),
+(7, 12, (SELECT player_id FROM players WHERE email = 'travis.head@seed.msms.local'), 'run', 3, 2, 4, 'Square drive on the rise'),
+(7, 12, (SELECT player_id FROM players WHERE email = 'marcus.stoinis@seed.msms.local'), 'run', 16, 5, 6, 'Muscle through midwicket'),
+(7, 11, (SELECT player_id FROM players WHERE email = 'jasprit.bumrah@seed.msms.local'), 'wicket', 20, 1, 0, 'Slower ball induces top edge');
 
--- BADMINTON MATCH 7 (match_id=7): Shuttle Kings 2-0 Smash Warriors (sets)
-INSERT INTO match_events (match_id, team_id, player_id, event_type, set_number, detail) VALUES
-(7, 7, 51, 'set_won',   1, 'Won set 21-17'),
-(7, 7, 51, 'set_won',   2, 'Won set 21-15'),
-(7, 7, 51, 'match_won', 2, 'Won the match 2-0 in sets'),
-(7, 7, 51, 'point_won', 1, 'Smash winner'),
-(7, 7, 51, 'point_won', 1, 'Net drop winner'),
-(7, 8, 55, 'point_won', 1, 'Cross-court smash'),
-(7, 7, 51, 'point_won', 2, 'Deceptive drop shot'),
-(7, 8, 55, 'point_won', 2, 'Drive winner'),
-(7, 7, 51, 'point_won', 2, 'Jump smash winner');
-
--- ============================================================
--- PLAYER_MATCH_STATS (stats for completed matches)
--- ============================================================
-
--- Cricket Match 1 — Royal Strikers batters
-INSERT INTO player_match_stats (player_id, match_id, runs_scored, balls_faced, wickets_taken, rating, notes) VALUES
-(1,  1, 72,  48, 0, 8.5, 'Excellent batting display'),
-(2,  1, 45,  32, 0, 7.0, 'Good start but got out'),
-(3,  1, 28,  22, 0, 6.5, 'Useful contribution'),
-(4,  1, 22,  15, 0, 7.5, 'Quick-fire cameo'),
-(5,  1, 18,  14, 0, 6.0, 'Steady innings')
-ON CONFLICT(player_id, match_id) DO UPDATE SET runs_scored=excluded.runs_scored, balls_faced=excluded.balls_faced, wickets_taken=excluded.wickets_taken, rating=excluded.rating, notes=excluded.notes;
-
--- Cricket Match 1 — Royal Strikers bowlers
-INSERT INTO player_match_stats (player_id, match_id, wickets_taken, runs_conceded, overs_bowled, rating, notes) VALUES
-(6,  1, 3, 28, 4.0, 9.0, 'Outstanding bowling spell'),
-(7,  1, 2, 34, 4.0, 7.5, 'Good support bowling'),
-(9,  1, 1, 30, 4.0, 6.5, 'Economical spell')
-ON CONFLICT(player_id, match_id) DO UPDATE SET wickets_taken=excluded.wickets_taken, runs_conceded=excluded.runs_conceded, overs_bowled=excluded.overs_bowled, rating=excluded.rating, notes=excluded.notes;
-
--- Cricket Match 1 — Thunder Lions batters
-INSERT INTO player_match_stats (player_id, match_id, runs_scored, balls_faced, wickets_taken, rating, notes) VALUES
-(12, 1, 55, 40, 0, 8.0, 'Top scorer for the team'),
-(13, 1, 38, 28, 0, 7.0, 'Aggressive batting'),
-(14, 1, 22, 20, 0, 5.5, 'Struggled at times'),
-(15, 1, 18, 16, 0, 6.0, 'Brief but useful')
-ON CONFLICT(player_id, match_id) DO UPDATE SET runs_scored=excluded.runs_scored, balls_faced=excluded.balls_faced, wickets_taken=excluded.wickets_taken, rating=excluded.rating, notes=excluded.notes;
-
--- Cricket Match 1 — Thunder Lions bowlers
-INSERT INTO player_match_stats (player_id, match_id, wickets_taken, runs_conceded, overs_bowled, rating, notes) VALUES
-(16, 1, 1, 32, 4.0, 6.0, 'Decent bowling'),
-(17, 1, 2, 38, 4.0, 7.0, 'Key wickets at crucial times'),
-(20, 1, 0, 42, 4.0, 4.5, 'Expensive outing')
-ON CONFLICT(player_id, match_id) DO UPDATE SET wickets_taken=excluded.wickets_taken, runs_conceded=excluded.runs_conceded, overs_bowled=excluded.overs_bowled, rating=excluded.rating, notes=excluded.notes;
-
--- Football Match 3 — Phoenix FC
 INSERT INTO player_match_stats (player_id, match_id, goals_scored, assists, yellow_cards, minutes_played, rating, notes) VALUES
-(30, 3, 1, 1, 0, 90, 8.5, 'Goal and assist, excellent performance'),
-(29, 3, 1, 0, 1, 90, 7.5, 'Goal and a booking'),
-(31, 3, 1, 0, 0, 90, 8.0, 'Stunning long-range goal'),
-(28, 3, 0, 1, 0, 80, 7.0, 'Creative passing throughout')
+((SELECT player_id FROM players WHERE email = 'mohamed.salah@seed.msms.local'), 1, 1, 0, 0, 90, 8.4, 'Opened the scoring and remained dangerous throughout'),
+((SELECT player_id FROM players WHERE email = 'luis.diaz@seed.msms.local'), 1, 1, 0, 0, 84, 8.0, 'Excellent direct running from the left'),
+((SELECT player_id FROM players WHERE email = 'bukayo.saka@seed.msms.local'), 1, 1, 0, 0, 90, 7.8, 'Kept Arsenal alive with a quality finish'),
+((SELECT player_id FROM players WHERE email = 'declan.rice@seed.msms.local'), 1, 0, 0, 1, 90, 6.9, 'Strong duels but booked late')
 ON CONFLICT(player_id, match_id) DO UPDATE SET goals_scored=excluded.goals_scored, assists=excluded.assists, yellow_cards=excluded.yellow_cards, minutes_played=excluded.minutes_played, rating=excluded.rating, notes=excluded.notes;
 
--- Football Match 3 — Storm United
 INSERT INTO player_match_stats (player_id, match_id, goals_scored, assists, yellow_cards, minutes_played, rating, notes) VALUES
-(41, 3, 1, 0, 0, 90, 7.0, 'Converted the penalty'),
-(39, 3, 0, 1, 0, 90, 6.5, 'Set up the penalty'),
-(35, 3, 0, 0, 1, 90, 5.5, 'Booked for a foul')
+((SELECT player_id FROM players WHERE email = 'kylian.mbappe@seed.msms.local'), 2, 2, 0, 0, 90, 9.1, 'Decisive in transition and clinical with both finishes'),
+((SELECT player_id FROM players WHERE email = 'jude.bellingham@seed.msms.local'), 2, 1, 1, 0, 90, 8.7, 'Drove Madrid forward from midfield'),
+((SELECT player_id FROM players WHERE email = 'robert.lewandowski@seed.msms.local'), 2, 1, 0, 0, 90, 7.7, 'Sharp movement in the box'),
+((SELECT player_id FROM players WHERE email = 'lamine.yamal@seed.msms.local'), 2, 1, 0, 0, 88, 7.8, 'Created danger every time he isolated his marker')
 ON CONFLICT(player_id, match_id) DO UPDATE SET goals_scored=excluded.goals_scored, assists=excluded.assists, yellow_cards=excluded.yellow_cards, minutes_played=excluded.minutes_played, rating=excluded.rating, notes=excluded.notes;
 
--- Tennis Match 5 — Players
+INSERT INTO player_match_stats (player_id, match_id, goals_scored, assists, minutes_played, rating, notes) VALUES
+((SELECT player_id FROM players WHERE email = 'harry.kane@seed.msms.local'), 3, 1, 0, 90, 8.0, 'Converted his penalty and linked play well'),
+((SELECT player_id FROM players WHERE email = 'florian.wirtz@seed.msms.local'), 3, 1, 0, 90, 8.4, 'Equalized with a composed second-half finish'),
+((SELECT player_id FROM players WHERE email = 'granit.xhaka@seed.msms.local'), 3, 0, 0, 90, 7.5, 'Controlled long phases of possession')
+ON CONFLICT(player_id, match_id) DO UPDATE SET goals_scored=excluded.goals_scored, assists=excluded.assists, minutes_played=excluded.minutes_played, rating=excluded.rating, notes=excluded.notes;
+
+INSERT INTO player_match_stats (player_id, match_id, goals_scored, assists, minutes_played, rating, notes) VALUES
+((SELECT player_id FROM players WHERE email = 'bukayo.saka@seed.msms.local'), 4, 1, 1, 89, 9.0, 'Best player on the pitch with a goal and assist'),
+((SELECT player_id FROM players WHERE email = 'kai.havertz@seed.msms.local'), 4, 1, 0, 86, 8.2, 'Dominant in the air and pressed effectively'),
+((SELECT player_id FROM players WHERE email = 'martin.odegaard@seed.msms.local'), 4, 0, 1, 90, 8.0, 'Orchestrated Arsenal''s attacks')
+ON CONFLICT(player_id, match_id) DO UPDATE SET goals_scored=excluded.goals_scored, assists=excluded.assists, minutes_played=excluded.minutes_played, rating=excluded.rating, notes=excluded.notes;
+
+INSERT INTO player_match_stats (player_id, match_id, runs_scored, balls_faced, rating, notes) VALUES
+((SELECT player_id FROM players WHERE email = 'rohit.sharma@seed.msms.local'), 5, 47, 30, 8.2, 'Aggressive powerplay start'),
+((SELECT player_id FROM players WHERE email = 'suryakumar.yadav@seed.msms.local'), 5, 61, 34, 8.9, 'Match-shaping middle overs acceleration'),
+((SELECT player_id FROM players WHERE email = 'hardik.pandya@seed.msms.local'), 5, 28, 14, 7.7, 'Strong death overs cameo'),
+((SELECT player_id FROM players WHERE email = 'ruturaj.gaikwad@seed.msms.local'), 5, 54, 38, 8.0, 'Kept the chase alive'),
+((SELECT player_id FROM players WHERE email = 'shivam.dube@seed.msms.local'), 5, 32, 18, 7.2, 'Counter-attacking cameo')
+ON CONFLICT(player_id, match_id) DO UPDATE SET runs_scored=excluded.runs_scored, balls_faced=excluded.balls_faced, rating=excluded.rating, notes=excluded.notes;
+
+INSERT INTO player_match_stats (player_id, match_id, wickets_taken, runs_conceded, overs_bowled, rating, notes) VALUES
+((SELECT player_id FROM players WHERE email = 'jasprit.bumrah@seed.msms.local'), 5, 3, 24, 4.0, 9.3, 'Elite death bowling sealed the match'),
+((SELECT player_id FROM players WHERE email = 'trent.boult@seed.msms.local'), 5, 1, 31, 4.0, 7.2, 'Early movement with the new ball'),
+((SELECT player_id FROM players WHERE email = 'noor.ahmad@seed.msms.local'), 5, 2, 34, 4.0, 7.4, 'Threatened through the middle overs')
+ON CONFLICT(player_id, match_id) DO UPDATE SET wickets_taken=excluded.wickets_taken, runs_conceded=excluded.runs_conceded, overs_bowled=excluded.overs_bowled, rating=excluded.rating, notes=excluded.notes;
+
+INSERT INTO player_match_stats (player_id, match_id, runs_scored, balls_faced, rating, notes) VALUES
+((SELECT player_id FROM players WHERE email = 'suryakumar.yadav@seed.msms.local'), 7, 44, 27, 8.4, 'Inventive strokeplay lifted India late'),
+((SELECT player_id FROM players WHERE email = 'hardik.pandya@seed.msms.local'), 7, 31, 16, 7.9, 'Finished the innings strongly'),
+((SELECT player_id FROM players WHERE email = 'travis.head@seed.msms.local'), 7, 39, 24, 7.6, 'Fast start in the chase'),
+((SELECT player_id FROM players WHERE email = 'marcus.stoinis@seed.msms.local'), 7, 28, 15, 7.1, 'Kept Australia in the hunt')
+ON CONFLICT(player_id, match_id) DO UPDATE SET runs_scored=excluded.runs_scored, balls_faced=excluded.balls_faced, rating=excluded.rating, notes=excluded.notes;
+
+INSERT INTO player_match_stats (player_id, match_id, wickets_taken, runs_conceded, overs_bowled, rating, notes) VALUES
+((SELECT player_id FROM players WHERE email = 'jasprit.bumrah@seed.msms.local'), 7, 2, 21, 4.0, 9.0, 'Closed the innings with control and pace changes'),
+((SELECT player_id FROM players WHERE email = 'pat.cummins@seed.msms.local'), 7, 1, 29, 4.0, 7.3, 'Led Australia''s attack'),
+((SELECT player_id FROM players WHERE email = 'mitchell.starc@seed.msms.local'), 7, 2, 34, 4.0, 7.7, 'Struck early and returned well at the death')
+ON CONFLICT(player_id, match_id) DO UPDATE SET wickets_taken=excluded.wickets_taken, runs_conceded=excluded.runs_conceded, overs_bowled=excluded.overs_bowled, rating=excluded.rating, notes=excluded.notes;
+
 INSERT INTO player_match_stats (player_id, match_id, points_won, sets_won, games_won, rating, notes) VALUES
-(45, 5, 95,  2, 18, 8.5, 'Strong serving and baseline play'),
-(48, 5, 82,  1, 16, 7.5, 'Fought well in second set tiebreak')
+((SELECT player_id FROM players WHERE email = 'novak.djokovic@seed.msms.local'), 8, 96, 2, 18, 8.8, 'Managed the match expertly in the deciding set'),
+((SELECT player_id FROM players WHERE email = 'carlos.alcaraz@seed.msms.local'), 8, 89, 1, 15, 8.1, 'Electric second set and strong baseline play')
 ON CONFLICT(player_id, match_id) DO UPDATE SET points_won=excluded.points_won, sets_won=excluded.sets_won, games_won=excluded.games_won, rating=excluded.rating, notes=excluded.notes;
 
--- Badminton Match 7 — Players
 INSERT INTO player_match_stats (player_id, match_id, points_won, sets_won, rating, notes) VALUES
-(51, 7, 42, 2, 9.0, 'Dominant smashing and net play'),
-(55, 7, 32, 0, 6.0, 'Unable to handle the pace')
+((SELECT player_id FROM players WHERE email = 'lakshya.sen@seed.msms.local'), 10, 58, 2, 8.7, 'Controlled the pace and won the longer rallies'),
+((SELECT player_id FROM players WHERE email = 'anders.antonsen@seed.msms.local'), 10, 51, 1, 7.9, 'Forced a decider with an attacking second game')
 ON CONFLICT(player_id, match_id) DO UPDATE SET points_won=excluded.points_won, sets_won=excluded.sets_won, rating=excluded.rating, notes=excluded.notes;
 
--- ============================================================
--- MATCH_ROSTERS (Lineup for completed cricket match)
--- ============================================================
-
--- Royal Strikers lineup for Match 1
 INSERT INTO match_rosters (match_id, player_id, team_id, lineup_position, is_starting) VALUES
-(1, 1,  1, 1,  1),   -- Virat Sharma - Opening batsman
-(1, 2,  1, 2,  1),   -- Rohit Patel - Opening batsman
-(1, 3,  1, 3,  1),   -- Shubman Gill
-(1, 4,  1, 4,  1),   -- Hardik Pandya
-(1, 5,  1, 5,  1),   -- Ravindra Jadeja
-(1, 8,  1, 6,  1),   -- Rishabh Iyer (WK)
-(1, 10, 1, 7,  1),   -- Axar Singh
-(1, 11, 1, 8,  1),   -- Shreyas Kumar
-(1, 6,  1, 9,  1),   -- Jasprit Bumrah
-(1, 7,  1, 10, 1),   -- Mohammed Shami
-(1, 9,  1, 11, 1);   -- Kuldeep Yadav
-
--- Thunder Lions lineup for Match 1
-INSERT INTO match_rosters (match_id, player_id, team_id, lineup_position, is_starting) VALUES
-(1, 12, 2, 1,  1),   -- KL Rahul - Opening
-(1, 13, 2, 2,  1),   -- Suryakumar Yadav - Opening
-(1, 14, 2, 3,  1),   -- Ishan Kishan (WK)
-(1, 15, 2, 4,  1),   -- Shardul Thakur
-(1, 18, 2, 5,  1),   -- Dinesh Karthik
-(1, 19, 2, 6,  1),   -- Washington Sundar
-(1, 21, 2, 7,  1),   -- Prithvi Shaw
-(1, 16, 2, 8,  1),   -- Yuzvendra Chahal
-(1, 17, 2, 9,  1),   -- Bhuvneshwar Kumar
-(1, 20, 2, 10, 1),   -- Deepak Chahar
-(1, 22, 2, 11, 1);   -- Navdeep Saini
+(5, (SELECT player_id FROM players WHERE email = 'rohit.sharma@seed.msms.local'), 1, 1, 1),
+(5, (SELECT player_id FROM players WHERE email = 'ryan.rickelton@seed.msms.local'), 1, 2, 1),
+(5, (SELECT player_id FROM players WHERE email = 'suryakumar.yadav@seed.msms.local'), 1, 3, 1),
+(5, (SELECT player_id FROM players WHERE email = 'tilak.varma@seed.msms.local'), 1, 4, 1),
+(5, (SELECT player_id FROM players WHERE email = 'hardik.pandya@seed.msms.local'), 1, 5, 1),
+(5, (SELECT player_id FROM players WHERE email = 'trent.boult@seed.msms.local'), 1, 6, 1),
+(5, (SELECT player_id FROM players WHERE email = 'jasprit.bumrah@seed.msms.local'), 1, 7, 1),
+(5, (SELECT player_id FROM players WHERE email = 'ruturaj.gaikwad@seed.msms.local'), 2, 1, 1),
+(5, (SELECT player_id FROM players WHERE email = 'devon.conway@seed.msms.local'), 2, 2, 1),
+(5, (SELECT player_id FROM players WHERE email = 'shivam.dube@seed.msms.local'), 2, 3, 1),
+(5, (SELECT player_id FROM players WHERE email = 'ravindra.jadeja@seed.msms.local'), 2, 4, 1),
+(5, (SELECT player_id FROM players WHERE email = 'ms.dhoni@seed.msms.local'), 2, 5, 1),
+(5, (SELECT player_id FROM players WHERE email = 'noor.ahmad@seed.msms.local'), 2, 6, 1),
+(5, (SELECT player_id FROM players WHERE email = 'ravichandran.ashwin@seed.msms.local'), 2, 7, 1),
+(7, (SELECT player_id FROM players WHERE email = 'rohit.sharma@seed.msms.local'), 11, 1, 1),
+(7, (SELECT player_id FROM players WHERE email = 'virat.kohli@seed.msms.local'), 11, 2, 1),
+(7, (SELECT player_id FROM players WHERE email = 'suryakumar.yadav@seed.msms.local'), 11, 3, 1),
+(7, (SELECT player_id FROM players WHERE email = 'hardik.pandya@seed.msms.local'), 11, 4, 1),
+(7, (SELECT player_id FROM players WHERE email = 'jasprit.bumrah@seed.msms.local'), 11, 5, 1),
+(7, (SELECT player_id FROM players WHERE email = 'travis.head@seed.msms.local'), 12, 1, 1),
+(7, (SELECT player_id FROM players WHERE email = 'pat.cummins@seed.msms.local'), 12, 2, 1),
+(7, (SELECT player_id FROM players WHERE email = 'mitchell.starc@seed.msms.local'), 12, 3, 1),
+(7, (SELECT player_id FROM players WHERE email = 'glenn.maxwell@seed.msms.local'), 12, 4, 1),
+(7, (SELECT player_id FROM players WHERE email = 'marcus.stoinis@seed.msms.local'), 12, 5, 1);

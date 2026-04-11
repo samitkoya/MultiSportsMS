@@ -105,6 +105,29 @@ CREATE TABLE IF NOT EXISTS players (
 );
 
 -- ============================================================
+-- TABLE 5B: player_team_memberships
+-- A player may belong to multiple teams simultaneously (club/country/etc).
+-- Team-specific attributes such as jersey number and position live here.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS player_team_memberships (
+    membership_id    INTEGER PRIMARY KEY AUTOINCREMENT,
+    player_id        INTEGER NOT NULL,
+    team_id          INTEGER NOT NULL,
+    jersey_number    INTEGER,
+    position         TEXT,
+    membership_type  TEXT    NOT NULL DEFAULT 'club' CHECK (membership_type IN ('club', 'country', 'loan', 'academy', 'other')),
+    is_active        BOOLEAN DEFAULT 1,
+    start_date       DATE    DEFAULT CURRENT_DATE,
+    end_date         DATE,
+    notes            TEXT,
+    created_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE (player_id, team_id, membership_type, is_active),
+    FOREIGN KEY (player_id) REFERENCES players(player_id) ON DELETE CASCADE,
+    FOREIGN KEY (team_id)   REFERENCES teams(team_id)   ON DELETE CASCADE
+);
+
+-- ============================================================
 -- TABLE 6: events (Tournaments / Leagues)
 -- Each event is linked to one sport.
 -- ============================================================
@@ -266,6 +289,8 @@ CREATE TABLE IF NOT EXISTS match_rosters (
 -- INDEXES (7 performance indexes on frequently queried columns)
 -- ============================================================
 CREATE INDEX IF NOT EXISTS idx_players_team       ON players(team_id);
+CREATE INDEX IF NOT EXISTS idx_memberships_player ON player_team_memberships(player_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_memberships_team   ON player_team_memberships(team_id, is_active);
 CREATE INDEX IF NOT EXISTS idx_matches_event      ON matches(event_id);
 CREATE INDEX IF NOT EXISTS idx_matches_date       ON matches(match_date);
 CREATE INDEX IF NOT EXISTS idx_match_events_match ON match_events(match_id);
@@ -393,8 +418,8 @@ SELECT
     -- General
     ROUND(AVG(pms.rating), 2)            AS avg_rating
 FROM players p
-JOIN teams t        ON p.team_id   = t.team_id
-JOIN sports s       ON t.sport_id  = s.sport_id
+LEFT JOIN teams t        ON p.team_id   = t.team_id
+LEFT JOIN sports s       ON t.sport_id  = s.sport_id
 LEFT JOIN player_match_stats pms ON p.player_id = pms.player_id
 WHERE p.is_deleted = 0
 GROUP BY p.player_id;
@@ -444,8 +469,8 @@ SELECT
     END AS score_total,
     COUNT(pms.match_id) AS matches_played
 FROM players p
-JOIN teams t        ON p.team_id   = t.team_id
-JOIN sports s       ON t.sport_id  = s.sport_id
+LEFT JOIN teams t        ON p.team_id   = t.team_id
+LEFT JOIN sports s       ON t.sport_id  = s.sport_id
 LEFT JOIN player_match_stats pms ON p.player_id = pms.player_id
 WHERE p.is_deleted = 0
 GROUP BY p.player_id
@@ -467,10 +492,10 @@ SELECT
     c.coach_id,
     COALESCE(v.name, 'No Home Venue')                         AS home_venue,
     v.venue_id,
-    COUNT(p.player_id)                                         AS player_count
+    COUNT(DISTINCT ptm.player_id)                              AS player_count
 FROM teams t
 JOIN sports s         ON t.sport_id      = s.sport_id
 LEFT JOIN coaches c   ON t.coach_id      = c.coach_id
 LEFT JOIN venues v    ON t.home_venue_id  = v.venue_id
-LEFT JOIN players p   ON t.team_id       = p.team_id AND p.is_deleted = 0
+LEFT JOIN player_team_memberships ptm ON t.team_id = ptm.team_id AND ptm.is_active = 1
 GROUP BY t.team_id;

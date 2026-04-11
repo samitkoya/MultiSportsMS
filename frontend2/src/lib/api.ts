@@ -42,6 +42,24 @@ export interface Player {
   team_name: string | null;
   sport_id?: number | null;
   sport_name?: string | null;
+  memberships: PlayerMembership[];
+  membership_count: number;
+  team_names: string;
+}
+
+export interface PlayerMembership {
+  membership_id?: number;
+  team_id: number;
+  team_name: string;
+  sport_id: number;
+  sport_name: string;
+  jersey_number: number | null;
+  position: string | null;
+  membership_type: string;
+  is_active: boolean;
+  start_date: string | null;
+  end_date: string | null;
+  notes: string | null;
 }
 
 export interface PlayerStats {
@@ -176,8 +194,18 @@ export const updateTeam = (id: number, data: Record<string, unknown>) =>
 export const deleteTeam = (id: number) =>
   fetchJSON(`/teams/${id}`, { method: "DELETE" });
 
-export const addPlayerToTeam = (teamId: number, playerId: number) =>
-  fetchJSON(`/teams/${teamId}/players`, { method: "POST", body: JSON.stringify({ player_id: playerId }) });
+export const addPlayerToTeam = (
+  teamId: number,
+  data: {
+    player_id: number;
+    jersey_number?: number;
+    position?: string;
+    membership_type?: string;
+    start_date?: string;
+    end_date?: string;
+    notes?: string;
+  },
+) => fetchJSON(`/teams/${teamId}/players`, { method: "POST", body: JSON.stringify(data) });
 
 // Matches
 export const getMatches = () =>
