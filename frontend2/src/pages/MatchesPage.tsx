@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Pencil, ClipboardCheck } from "lucide-react";
-import { getMatches, logMatchResult, logMatchScore, scheduleMatch, updateMatchStatus, deleteMatch, getEvents, getTeams } from "@/lib/api";
+import { getMatches, logMatchResult, logMatchScore, scheduleMatch, updateMatchStatus, deleteMatch, getEvents, getTeams, type Match } from "@/lib/api";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { Badge } from "@/components/ui/badge";
@@ -19,9 +19,6 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Match = any;
-
 const getScoreLabel = (sportName: string) => {
   if (!sportName) return "Score";
   const name = sportName.toLowerCase();
@@ -36,16 +33,16 @@ export default function MatchesPage() {
   const { data: rawMatches, isLoading } = useQuery({ queryKey: ["matches"], queryFn: getMatches });
   
   const matches = rawMatches?.map(m => {
-    const t1 = m.teams && m.teams.length > 0 ? m.teams[0] : ({} as any);
-    const t2 = m.teams && m.teams.length > 1 ? m.teams[1] : ({} as any);
+    const t1 = m.teams?.[0];
+    const t2 = m.teams?.[1];
     return {
       ...m,
-      team1_id: t1.team_id,
-      team1_name: t1.team_name,
-      team1_score: t1.score ?? t1.sets_won ?? t1.innings_1_score,
-      team2_id: t2.team_id,
-      team2_name: t2.team_name,
-      team2_score: t2.score ?? t2.sets_won ?? t2.innings_1_score,
+      team1_id: t1?.team_id,
+      team1_name: t1?.team_name,
+      team1_score: t1?.score ?? t1?.sets_won ?? t1?.innings_1_score,
+      team2_id: t2?.team_id,
+      team2_name: t2?.team_name,
+      team2_score: t2?.score ?? t2?.sets_won ?? t2?.innings_1_score,
     };
   });
   const { data: events } = useQuery({ queryKey: ["events"], queryFn: getEvents });
@@ -57,7 +54,7 @@ export default function MatchesPage() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
-  const [form, setForm] = useState({ event_id: "", match_date: "", team1_id: "", team2_id: "", status: "scheduled", round_name: "" });
+  const [form, setForm] = useState({ event_id: "standalone", match_date: "", team1_id: "", team2_id: "", status: "scheduled", round_name: "" });
 
   const createMut = useMutation({
     mutationFn: scheduleMatch,
@@ -83,8 +80,8 @@ export default function MatchesPage() {
       const s2 = Number(scores.team2_score);
       const winner = s1 > s2 ? m.team1_id : s2 > s1 ? m.team2_id : m.team1_id;
       
-      let scoreObj1 = { score: s1 } as any;
-      let scoreObj2 = { score: s2 } as any;
+      let scoreObj1: { score: number; innings_1_score?: number; sets_won?: number } = { score: s1 };
+      let scoreObj2: { score: number; innings_1_score?: number; sets_won?: number } = { score: s2 };
       
       if (m.sport_name && (m.sport_name.toLowerCase().includes('badminton') || m.sport_name.toLowerCase().includes('tennis'))) {
         scoreObj1 = { score: s1, sets_won: s1 };
@@ -112,7 +109,7 @@ export default function MatchesPage() {
 
   const handleSaveMatch = () => {
     const b = {
-      event_id: form.event_id ? Number(form.event_id) : undefined,
+      event_id: form.event_id !== "standalone" ? Number(form.event_id) : undefined,
       match_date: form.match_date,
       status: form.status,
       round_name: form.round_name,
@@ -128,7 +125,7 @@ export default function MatchesPage() {
   const openCreate = () => {
     setIsEdit(false);
     setSelectedMatch(null);
-    setForm({ event_id: "", match_date: "", team1_id: "", team2_id: "", status: "scheduled", round_name: "" });
+    setForm({ event_id: "standalone", match_date: "", team1_id: "", team2_id: "", status: "scheduled", round_name: "" });
     setCreateOpen(true);
   };
 
@@ -136,7 +133,7 @@ export default function MatchesPage() {
     setIsEdit(true);
     setSelectedMatch(m);
     setForm({
-      event_id: m.event_id ? String(m.event_id) : "",
+      event_id: m.event_id ? String(m.event_id) : "standalone",
       match_date: m.match_date ? new Date(m.match_date).toISOString().split('T')[0] : "",
       team1_id: m.team1_id ? String(m.team1_id) : "",
       team2_id: m.team2_id ? String(m.team2_id) : "",
@@ -148,7 +145,7 @@ export default function MatchesPage() {
 
   const statusBadge = (s: string) => {
     if (s === "completed") return "bg-sport-green/20 text-sport-green border-sport-green/30";
-    if (s === "live") return "bg-sport-red/20 text-sport-red border-sport-red/30 animate-pulse-glow";
+    if (s === "ongoing") return "bg-sport-red/20 text-sport-red border-sport-red/30 animate-pulse-glow";
     return "bg-sport-yellow/20 text-sport-yellow border-sport-yellow/30";
   };
 
@@ -272,7 +269,7 @@ export default function MatchesPage() {
                   <SelectValue placeholder="Standalone Match" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Standalone Match</SelectItem>
+                  <SelectItem value="standalone">Standalone Match</SelectItem>
                   {events?.map((e) => (
                     <SelectItem key={e.event_id} value={String(e.event_id)}>{e.name}</SelectItem>
                   ))}
@@ -322,8 +319,10 @@ export default function MatchesPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="scheduled">Scheduled</SelectItem>
-                    <SelectItem value="live">Live</SelectItem>
+                    <SelectItem value="ongoing">Ongoing</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                    <SelectItem value="postponed">Postponed</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

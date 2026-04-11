@@ -19,7 +19,7 @@ router.get('/', (req, res) => {
         let sql = `
             SELECT 
                 m.match_id, m.match_date, m.status, m.round_name, m.result_summary,
-                m.created_at,
+                m.created_at, m.venue_id,
                 e.event_id, e.name AS event_name,
                 s.sport_id, s.name AS sport_name,
                 v.name AS venue_name, v.location AS venue_location
@@ -53,17 +53,26 @@ router.get('/', (req, res) => {
 
         const matches = db.prepare(sql).all(...params);
 
-        // Attach team info to each match
-        const matchIds = matches.map(m => m.match_id);
+        const matchIds = matches.map((match) => match.match_id);
         if (matchIds.length > 0) {
+            const placeholders = matchIds.map(() => '?').join(', ');
+            const teams = db.prepare(`
+                SELECT mt.match_id, mt.team_id, t.name AS team_name, mt.score, mt.is_winner,
+                       mt.innings_1_score, mt.innings_2_score, mt.sets_won
+                FROM match_teams mt
+                JOIN teams t ON mt.team_id = t.team_id
+                WHERE mt.match_id IN (${placeholders})
+                ORDER BY mt.match_id, mt.team_id
+            `).all(...matchIds);
+
+            const teamsByMatch = teams.reduce((acc, team) => {
+                if (!acc[team.match_id]) acc[team.match_id] = [];
+                acc[team.match_id].push(team);
+                return acc;
+            }, {});
+
             for (const match of matches) {
-                match.teams = db.prepare(`
-                    SELECT mt.team_id, t.name AS team_name, mt.score, mt.is_winner,
-                           mt.innings_1_score, mt.innings_2_score, mt.sets_won
-                    FROM match_teams mt
-                    JOIN teams t ON mt.team_id = t.team_id
-                    WHERE mt.match_id = ?
-                `).all(match.match_id);
+                match.teams = teamsByMatch[match.match_id] || [];
             }
         }
 
@@ -153,6 +162,11 @@ router.post('/', (req, res) => {
             return res.status(400).json({ error: 'match_date and at least 2 team_ids are required' });
         }
 
+        const uniqueTeamIds = [...new Set(team_ids)];
+        if (uniqueTeamIds.length !== team_ids.length) {
+            return res.status(400).json({ error: 'A match cannot include the same team more than once' });
+        }
+
         // Use a TRANSACTION to insert match + match_teams + schedule atomically
         const insertMatch = db.transaction(() => {
             // INSERT into matches
@@ -167,7 +181,7 @@ router.post('/', (req, res) => {
             const insertTeam = db.prepare(`
                 INSERT INTO match_teams (match_id, team_id) VALUES (?, ?)
             `);
-            for (const tid of team_ids) {
+            for (const tid of uniqueTeamIds) {
                 insertTeam.run(matchId, tid);
             }
 
@@ -211,9 +225,14 @@ router.put('/:id', (req, res) => {
             );
 
             if (team_ids && Array.isArray(team_ids) && team_ids.length >= 2) {
+                const uniqueTeamIds = [...new Set(team_ids)];
+                if (uniqueTeamIds.length !== team_ids.length) {
+                    throw new Error('A match cannot include the same team more than once');
+                }
+
                 db.prepare('DELETE FROM match_teams WHERE match_id = ?').run(req.params.id);
                 const insertTeam = db.prepare('INSERT INTO match_teams (match_id, team_id) VALUES (?, ?)');
-                for (const tid of team_ids) {
+                for (const tid of uniqueTeamIds) {
                     insertTeam.run(req.params.id, tid);
                 }
             }
@@ -377,21 +396,6 @@ router.post('/:id/events', (req, res) => {
                     event_type, minute_or_over || null, ball_in_over || null,
                     runs_scored || 0, detail || null
                 );
-
-                // Find next batsman from match_rosters
-                const nextBatsman = db.prepare(`
-                    SELECT player_id FROM match_rosters 
-                    WHERE match_id = ? AND team_id = ? AND is_starting = 0
-                    ORDER BY lineup_position LIMIT 1
-                `).get(req.params.id, team_id);
-
-                if (nextBatsman) {
-                    // Mark next batsman as now batting
-                    db.prepare(`
-                        UPDATE match_rosters SET is_starting = 1
-                        WHERE match_id = ? AND player_id = ?
-                    `).run(req.params.id, nextBatsman.player_id);
-                }
 
                 return result.lastInsertRowid;
             });

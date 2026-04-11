@@ -5,12 +5,13 @@ import {
   Shield,
   Swords,
   Trophy,
+  MapPin,
+  UserCog,
   Menu,
   Sun,
   Moon,
   X,
 } from "lucide-react";
-import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/hooks/use-theme";
 
@@ -18,13 +19,21 @@ const navItems = [
   { title: "Dashboard", path: "/", icon: LayoutDashboard },
   { title: "Players", path: "/players", icon: Users },
   { title: "Teams", path: "/teams", icon: Shield },
+  { title: "Coaches", path: "/coaches", icon: UserCog },
+  { title: "Venues", path: "/venues", icon: MapPin },
   { title: "Matches", path: "/matches", icon: Swords },
   { title: "Tournaments", path: "/tournaments", icon: Trophy },
 ];
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  collapsed: boolean;
+  mobileOpen: boolean;
+  onToggleCollapse: () => void;
+  onCloseMobile: () => void;
+}
+
+export function AppSidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile }: AppSidebarProps) {
   const location = useLocation();
-  const [collapsed, setCollapsed] = useState(false);
   const { theme, toggle } = useTheme();
 
   return (
@@ -33,15 +42,16 @@ export function AppSidebar() {
       <div
         className={cn(
           "fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden",
-          collapsed ? "hidden" : "block lg:hidden"
+          mobileOpen ? "block" : "hidden",
         )}
-        onClick={() => setCollapsed(true)}
+        onClick={onCloseMobile}
       />
 
       <aside
         className={cn(
-          "fixed left-0 top-0 z-50 flex h-screen flex-col border-r border-border bg-sidebar transition-all duration-300",
-          collapsed ? "w-16" : "w-60"
+          "fixed left-0 top-0 z-50 flex h-screen w-60 flex-col border-r border-border bg-sidebar transition-all duration-300",
+          mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
+          collapsed ? "lg:w-16" : "lg:w-60",
         )}
       >
         {/* Logo */}
@@ -53,7 +63,7 @@ export function AppSidebar() {
             </span>
           )}
           <button
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={onToggleCollapse}
             className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             {collapsed ? <Menu size={20} /> : <X size={20} />}
@@ -77,6 +87,7 @@ export function AppSidebar() {
                     ? "bg-primary/15 text-primary shadow-sm"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground"
                 )}
+                onClick={onCloseMobile}
               >
                 <item.icon size={20} />
                 {!collapsed && <span>{item.title}</span>}

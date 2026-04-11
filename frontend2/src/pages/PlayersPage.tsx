@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Search, Plus, Trash2, BarChart3, Pencil } from "lucide-react";
-import { getPlayers, getTeams, createPlayer, updatePlayer, deletePlayer, getPlayerStats } from "@/lib/api";
+import { type Player, getPlayers, getTeams, createPlayer, updatePlayer, deletePlayer, getPlayerStats } from "@/lib/api";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -74,7 +74,7 @@ export default function PlayersPage() {
     if (isEdit && selectedPlayerId) {
       updateMut.mutate({ id: selectedPlayerId, body: data });
     } else {
-      createMut.mutate(data as any);
+      createMut.mutate(data);
     }
   };
 
@@ -85,7 +85,7 @@ export default function PlayersPage() {
     setCreateOpen(true);
   };
 
-  const openEdit = (p: any) => {
+  const openEdit = (p: Player) => {
     setIsEdit(true);
     setSelectedPlayerId(p.player_id);
     setForm({
@@ -251,20 +251,18 @@ export default function PlayersPage() {
           <div className="py-4">
             {loadingStats ? (
               <p className="text-muted-foreground text-center py-4">Loading stats...</p>
-            ) : playerStats && playerStats.length > 0 ? (
+            ) : playerStats ? (
               <div className="space-y-3">
-                {playerStats.map((stat, i) => (
-                  <div key={i} className="rounded-lg bg-secondary p-4">
-                    {Object.entries(stat)
-                      .filter(([k]) => !["player_id", "stat_id", "match_id", "sport_id"].includes(k))
-                      .map(([key, val]) => (
-                        <div key={key} className="flex items-center justify-between py-1">
-                          <span className="text-sm text-muted-foreground">{formatStatKey(key)}</span>
-                          <span className="text-sm font-medium text-foreground">{String(val)}</span>
-                        </div>
-                      ))}
-                  </div>
-                ))}
+                <div className="rounded-lg bg-secondary p-4">
+                  {Object.entries(playerStats)
+                    .filter(([k]) => !["player_id"].includes(k))
+                    .map(([key, val]) => (
+                      <div key={key} className="flex items-center justify-between py-1">
+                        <span className="text-sm text-muted-foreground">{formatStatKey(key)}</span>
+                        <span className="text-sm font-medium text-foreground">{String(val ?? "-")}</span>
+                      </div>
+                    ))}
+                </div>
               </div>
             ) : (
               <p className="text-muted-foreground text-center py-4">No stats available</p>

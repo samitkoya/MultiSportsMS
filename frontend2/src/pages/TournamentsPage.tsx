@@ -28,7 +28,7 @@ export default function TournamentsPage() {
   const [assignOpen, setAssignOpen] = useState(false);
   const [assignTeamId, setAssignTeamId] = useState("");
 
-  const [form, setForm] = useState({ name: "", sport_id: "", format: "", start_date: "", end_date: "", status: "scheduled", description: "" });
+  const [form, setForm] = useState({ name: "", sport_id: "", format: "", start_date: "", end_date: "", status: "upcoming", description: "" });
 
   const { data: events, isLoading } = useQuery({ queryKey: ["events"], queryFn: getEvents });
   const { data: sports } = useQuery({ queryKey: ["sports"], queryFn: getSports });
@@ -65,7 +65,7 @@ export default function TournamentsPage() {
     const end = new Date(e.end_date);
     if (now > end) return "completed";
     if (now >= start && now <= end) return "ongoing";
-    return "scheduled";
+    return "upcoming";
   };
 
   const statusStyle = (s: string) => {
@@ -82,19 +82,18 @@ export default function TournamentsPage() {
     if (isEdit && selectedEventId) {
       updateMut.mutate({ id: selectedEventId, body: data });
     } else {
-      createMut.mutate(data as any);
+      createMut.mutate(data);
     }
   };
 
   const openCreate = () => {
     setIsEdit(false);
     setSelectedEventId(null);
-    setForm({ name: "", sport_id: "", format: "", start_date: "", end_date: "", status: "scheduled", description: "" });
+    setForm({ name: "", sport_id: "", format: "", start_date: "", end_date: "", status: "upcoming", description: "" });
     setCreateOpen(true);
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const openEdit = (e: any) => {
+  const openEdit = (e: { event_id: number; name: string; sport_id: number; format: string | null; start_date: string; end_date: string | null; status: string; description: string | null }) => {
     setIsEdit(true);
     setSelectedEventId(e.event_id);
     setForm({
@@ -103,7 +102,7 @@ export default function TournamentsPage() {
       format: e.format || "",
       start_date: e.start_date ? new Date(e.start_date).toISOString().split('T')[0] : "",
       end_date: e.end_date ? new Date(e.end_date).toISOString().split('T')[0] : "",
-      status: e.status || "scheduled",
+      status: e.status || "upcoming",
       description: e.description || "",
     });
     setCreateOpen(true);
@@ -251,9 +250,10 @@ export default function TournamentsPage() {
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="scheduled">Scheduled</SelectItem>
+                  <SelectItem value="upcoming">Upcoming</SelectItem>
                   <SelectItem value="ongoing">Ongoing</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -281,7 +281,10 @@ export default function TournamentsPage() {
                   <SelectValue placeholder="Select team" />
                 </SelectTrigger>
                 <SelectContent>
-                  {teams?.map((t) => (
+                  {teams?.filter((t) => {
+                    const selectedEvent = events?.find((event) => event.event_id === selectedEventId);
+                    return !selectedEvent || t.sport_id === selectedEvent.sport_id;
+                  }).map((t) => (
                     <SelectItem key={t.team_id} value={String(t.team_id)}>{t.name} ({t.sport_name})</SelectItem>
                   ))}
                 </SelectContent>

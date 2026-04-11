@@ -7,6 +7,8 @@ import { ThemeProvider } from "@/hooks/use-theme";
 import Dashboard from "./pages/Dashboard";
 import PlayersPage from "./pages/PlayersPage";
 import TeamsPage from "./pages/TeamsPage";
+import CoachesPage from "./pages/CoachesPage";
+import VenuesPage from "./pages/VenuesPage";
 import MatchesPage from "./pages/MatchesPage";
 import TournamentsPage from "./pages/TournamentsPage";
 import NotFound from "./pages/NotFound";
@@ -24,6 +26,8 @@ const App = () => (
           <Route path="/" element={<Dashboard />} />
           <Route path="/players" element={<PlayersPage />} />
           <Route path="/teams" element={<TeamsPage />} />
+          <Route path="/coaches" element={<CoachesPage />} />
+          <Route path="/venues" element={<VenuesPage />} />
           <Route path="/matches" element={<MatchesPage />} />
           <Route path="/tournaments" element={<TournamentsPage />} />
           <Route path="*" element={<NotFound />} />

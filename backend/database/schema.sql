@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS teams (
     coach_id      INTEGER,
     founded_year  INTEGER,
     home_venue_id INTEGER,
+    team_image_url TEXT,
     status        TEXT    DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'disbanded')),
     created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
 

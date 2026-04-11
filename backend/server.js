@@ -28,6 +28,7 @@ app.use(express.json());
     // ---- API Routes ----
     app.use('/api/sports',    require('./routes/sports'));
     app.use('/api/coaches',   require('./routes/coaches'));
+    app.use('/api/venues',    require('./routes/venues'));
     app.use('/api/teams',     require('./routes/teams'));
     app.use('/api/players',   require('./routes/players'));
     app.use('/api/events',    require('./routes/events'));

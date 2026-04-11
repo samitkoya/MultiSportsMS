@@ -45,7 +45,7 @@ export default function Dashboard() {
         />
         <StatCard
           title="Matches Completed"
-          value={loadingOverview ? "..." : overview?.matches_completed ?? 0}
+          value={loadingOverview ? "..." : overview?.completed_matches ?? overview?.matches_completed ?? 0}
           icon={Swords}
           glowClass="glass-card-glow-green"
         />
@@ -80,8 +80,8 @@ export default function Dashboard() {
                   Loading...
                 </TableCell>
               </TableRow>
-            ) : topPlayers?.scorers && topPlayers.scorers.length > 0 ? (
-              topPlayers.scorers.map((p) => (
+            ) : topPlayers?.players && topPlayers.players.length > 0 ? (
+              topPlayers.players.map((p) => (
                 <TableRow key={p.player_id} className="border-border">
                   <TableCell className="font-medium text-foreground">
                     {p.first_name} {p.last_name}

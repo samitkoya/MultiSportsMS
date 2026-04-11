@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Search, Plus, Trash2, Pencil, UserPlus } from "lucide-react";
-import { getTeams, getSports, getCoaches, createTeam, updateTeam, deleteTeam, getPlayers, addPlayerToTeam } from "@/lib/api";
+import { TeamAvatar } from "@/components/TeamAvatar";
+import { getTeams, getSports, getCoaches, getVenues, createTeam, updateTeam, deleteTeam, getPlayers, addPlayerToTeam, type Team } from "@/lib/api";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -29,11 +30,12 @@ export default function TeamsPage() {
   const [assignOpen, setAssignOpen] = useState(false);
   const [assignPlayerId, setAssignPlayerId] = useState("");
 
-  const [form, setForm] = useState({ name: "", sport_id: "", coach_id: "", founded_year: "", home_venue_id: "", status: "active" });
+  const [form, setForm] = useState({ name: "", sport_id: "", coach_id: "", founded_year: "", home_venue_id: "", status: "active", team_image_url: "" });
 
   const { data: teams, isLoading } = useQuery({ queryKey: ["teams"], queryFn: getTeams });
   const { data: sports } = useQuery({ queryKey: ["sports"], queryFn: getSports });
   const { data: coaches } = useQuery({ queryKey: ["coaches"], queryFn: getCoaches });
+  const { data: venues } = useQuery({ queryKey: ["venues"], queryFn: getVenues });
   const { data: players } = useQuery({ queryKey: ["players"], queryFn: getPlayers });
 
   const createMut = useMutation({
@@ -62,7 +64,7 @@ export default function TeamsPage() {
 
   const filtered = teams?.filter((t) => {
     const q = search.toLowerCase();
-    return `${t.name} ${t.sport_name} ${t.coach_name} ${t.venue_name}`.toLowerCase().includes(q);
+    return `${t.name} ${t.sport_name} ${t.coach_name} ${t.home_venue}`.toLowerCase().includes(q);
   });
 
   const handleSave = () => {
@@ -72,23 +74,23 @@ export default function TeamsPage() {
       coach_id: form.coach_id ? Number(form.coach_id) : undefined,
       home_venue_id: form.home_venue_id ? Number(form.home_venue_id) : undefined,
       founded_year: form.founded_year ? Number(form.founded_year) : undefined,
+      team_image_url: form.team_image_url || undefined,
     };
     if (isEdit && selectedTeamId) {
       updateMut.mutate({ id: selectedTeamId, body: data });
     } else {
-      createMut.mutate(data as any);
+      createMut.mutate(data);
     }
   };
 
   const openCreate = () => {
     setIsEdit(false);
     setSelectedTeamId(null);
-    setForm({ name: "", sport_id: "", coach_id: "", founded_year: "", home_venue_id: "", status: "active" });
+    setForm({ name: "", sport_id: "", coach_id: "", founded_year: "", home_venue_id: "", status: "active", team_image_url: "" });
     setCreateOpen(true);
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const openEdit = (t: any) => {
+  const openEdit = (t: Team) => {
     setIsEdit(true);
     setSelectedTeamId(t.team_id);
     setForm({
@@ -98,6 +100,7 @@ export default function TeamsPage() {
       founded_year: t.founded_year ? String(t.founded_year) : "",
       home_venue_id: t.home_venue_id ? String(t.home_venue_id) : "",
       status: t.status || "active",
+      team_image_url: t.team_image_url || "",
     });
     setCreateOpen(true);
   };
@@ -157,8 +160,13 @@ export default function TeamsPage() {
               filtered.map((t) => (
                 <TableRow key={t.team_id} className="border-border">
                   <TableCell className="font-medium text-foreground">
-                    {t.name}
-                    <div className="text-xs text-muted-foreground font-normal">{t.founded_year && `Est. ${t.founded_year}`}</div>
+                    <div className="flex items-center gap-3">
+                      <TeamAvatar src={t.team_image_url} alt={t.name} />
+                      <div>
+                        <div>{t.name}</div>
+                        <div className="text-xs font-normal text-muted-foreground">{t.founded_year && `Est. ${t.founded_year}`}</div>
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell><Badge variant="secondary">{t.sport_name}</Badge></TableCell>
                   <TableCell className="text-muted-foreground">{t.coach_name || "—"}</TableCell>
@@ -241,6 +249,26 @@ export default function TeamsPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
+                <Label>Home Venue</Label>
+                <Select value={form.home_venue_id} onValueChange={(v) => setForm({ ...form, home_venue_id: v })}>
+                  <SelectTrigger className="bg-secondary border-border">
+                    <SelectValue placeholder="Select venue" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {venues?.map((venue) => (
+                      <SelectItem key={venue.venue_id} value={String(venue.venue_id)}>{venue.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Team Image URL</Label>
+                <Input value={form.team_image_url} onChange={(e) => setForm({ ...form, team_image_url: e.target.value })} className="bg-secondary border-border" placeholder="https://example.com/team.png" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
                 <Label>Founded Year</Label>
                 <Input type="number" value={form.founded_year} onChange={(e) => setForm({ ...form, founded_year: e.target.value })} className="bg-secondary border-border" />
               </div>
@@ -253,6 +281,7 @@ export default function TeamsPage() {
                   <SelectContent>
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="disbanded">Disbanded</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -281,7 +310,11 @@ export default function TeamsPage() {
                   <SelectValue placeholder="Select player" />
                 </SelectTrigger>
                 <SelectContent>
-                  {players?.filter(p => p.team_id !== selectedTeamId).map((p) => (
+                  {players?.filter((p) => {
+                    const selectedTeam = teams?.find((team) => team.team_id === selectedTeamId);
+                    if (!selectedTeam) return p.team_id !== selectedTeamId;
+                    return p.team_id !== selectedTeamId && p.sport_id === selectedTeam.sport_id;
+                  }).map((p) => (
                     <SelectItem key={p.player_id} value={String(p.player_id)}>{p.first_name} {p.last_name} ({p.sport_name || 'No Sport'})</SelectItem>
                   ))}
                 </SelectContent>

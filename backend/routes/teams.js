@@ -18,10 +18,12 @@ router.get('/', (req, res) => {
         let sql = `
             SELECT 
                 t.team_id, t.name, t.status, t.founded_year, t.created_at,
+                t.team_image_url,
                 s.sport_id, s.name AS sport_name,
                 COALESCE(c.first_name || ' ' || c.last_name, 'No Coach') AS coach_name,
                 c.coach_id,
                 COALESCE(v.name, 'No Home Venue') AS home_venue,
+                COALESCE(v.name, 'No Home Venue') AS venue_name,
                 v.venue_id AS home_venue_id,
                 COUNT(p.player_id) AS player_count
             FROM teams t
@@ -64,6 +66,7 @@ router.get('/:id', (req, res) => {
         const team = db.prepare(`
             SELECT 
                 t.team_id, t.name, t.status, t.founded_year, t.created_at,
+                t.team_image_url,
                 s.sport_id, s.name AS sport_name, s.max_players_per_team,
                 COALESCE(c.first_name || ' ' || c.last_name, 'No Coach') AS coach_name,
                 c.coach_id,
@@ -105,7 +108,7 @@ router.get('/:id', (req, res) => {
 router.post('/', (req, res) => {
     try {
         const db = req.app.locals.db;
-        const { name, sport_id, coach_id, founded_year, home_venue_id } = req.body;
+        const { name, sport_id, coach_id, founded_year, home_venue_id, team_image_url } = req.body;
 
         if (!name || !sport_id) {
             return res.status(400).json({ error: 'Team name and sport are required' });
@@ -128,9 +131,9 @@ router.post('/', (req, res) => {
         }
 
         const result = db.prepare(`
-            INSERT INTO teams (name, sport_id, coach_id, founded_year, home_venue_id)
-            VALUES (?, ?, ?, ?, ?)
-        `).run(name, sport_id, coach_id || null, founded_year || null, home_venue_id || null);
+            INSERT INTO teams (name, sport_id, coach_id, founded_year, home_venue_id, team_image_url)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `).run(name, sport_id, coach_id || null, founded_year || null, home_venue_id || null, team_image_url || null);
 
         const team = db.prepare('SELECT * FROM teams WHERE team_id = ?').get(result.lastInsertRowid);
         res.status(201).json(team);
@@ -147,14 +150,14 @@ router.post('/', (req, res) => {
 router.put('/:id', (req, res) => {
     try {
         const db = req.app.locals.db;
-        const { name, coach_id, status, home_venue_id, founded_year } = req.body;
+        const { name, coach_id, status, home_venue_id, founded_year, team_image_url } = req.body;
 
         const existing = db.prepare('SELECT * FROM teams WHERE team_id = ?').get(req.params.id);
         if (!existing) return res.status(404).json({ error: 'Team not found' });
 
         db.prepare(`
             UPDATE teams 
-            SET name = ?, coach_id = ?, status = ?, home_venue_id = ?, founded_year = ?
+            SET name = ?, coach_id = ?, status = ?, home_venue_id = ?, founded_year = ?, team_image_url = ?
             WHERE team_id = ?
         `).run(
             name || existing.name,
@@ -162,6 +165,7 @@ router.put('/:id', (req, res) => {
             status || existing.status,
             home_venue_id !== undefined ? (home_venue_id || null) : existing.home_venue_id,
             founded_year !== undefined ? founded_year : existing.founded_year,
+            team_image_url !== undefined ? (team_image_url || null) : existing.team_image_url,
             req.params.id
         );
 
@@ -228,8 +232,22 @@ router.post('/:id/players', (req, res) => {
 
         if (!player_id) return res.status(400).json({ error: 'player_id is required' });
 
+        const team = db.prepare('SELECT team_id, sport_id FROM teams WHERE team_id = ?').get(req.params.id);
+        if (!team) return res.status(404).json({ error: 'Team not found' });
+
         const player = db.prepare('SELECT * FROM players WHERE player_id = ? AND is_deleted = 0').get(player_id);
         if (!player) return res.status(404).json({ error: 'Player not found' });
+
+        if (player.team_id === team.team_id) {
+            return res.status(409).json({ error: 'Player is already assigned to this team' });
+        }
+
+        if (player.team_id) {
+            const playerTeam = db.prepare('SELECT sport_id FROM teams WHERE team_id = ?').get(player.team_id);
+            if (playerTeam && playerTeam.sport_id !== team.sport_id) {
+                return res.status(400).json({ error: 'Cannot move a player across sports through team assignment' });
+            }
+        }
 
         db.prepare('UPDATE players SET team_id = ? WHERE player_id = ?').run(req.params.id, player_id);
 

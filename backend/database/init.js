@@ -35,6 +35,23 @@ const DB_PATH = getDbPath();
 const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
 const SEED_PATH = path.join(__dirname, 'seed.sql');
 
+function columnExists(db, tableName, columnName) {
+    try {
+        const result = db.exec(`PRAGMA table_info(${tableName})`);
+        const rows = result[0]?.values || [];
+        return rows.some((row) => row[1] === columnName);
+    } catch (e) {
+        return false;
+    }
+}
+
+function applyMigrations(db) {
+    if (!columnExists(db, 'teams', 'team_image_url')) {
+        console.log('[DB] Applying migration: add teams.team_image_url');
+        db.run('ALTER TABLE teams ADD COLUMN team_image_url TEXT');
+    }
+}
+
 /**
  * Wrapper class that provides a better-sqlite3-like synchronous API
  * on top of sql.js's Database object.
@@ -208,6 +225,8 @@ async function initializeDatabase(options = {}) {
     }
 
     if (tableCount > 0 && !force) {
+        applyMigrations(db);
+        wrapper.save();
         console.log('[DB] Database already initialized. Skipping schema + seed.');
         return wrapper;
     }
@@ -260,6 +279,8 @@ async function initializeDatabase(options = {}) {
     console.log('[DB] Executing seed.sql...');
     const seed = fs.readFileSync(SEED_PATH, 'utf-8');
     db.run(seed);
+
+    applyMigrations(db);
 
     // Verify seed counts
     const getCnt = (table) => {

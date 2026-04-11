@@ -9,16 +9,144 @@ async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
   return res.json();
 }
 
+export interface DashboardSummary {
+  total_players: number;
+  total_teams: number;
+  upcoming_matches: number;
+  completed_matches: number;
+  matches_completed: number;
+}
+
+export interface TopPlayer {
+  player_id: number;
+  first_name: string;
+  last_name: string;
+  team_name: string;
+  sport_name: string;
+  matches_played: number;
+  avg_rating: number;
+}
+
+export interface Player {
+  player_id: number;
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  date_of_birth: string | null;
+  gender: string | null;
+  team_id: number | null;
+  jersey_number: number | null;
+  position: string | null;
+  status: string;
+  joined_date?: string | null;
+  team_name: string | null;
+  sport_id?: number | null;
+  sport_name?: string | null;
+}
+
+export interface PlayerStats {
+  player_id: number;
+  player_name: string;
+  matches_played: number;
+  total_runs: number;
+  total_balls: number;
+  total_wickets: number;
+  total_goals: number;
+  total_assists: number;
+  total_yellows: number;
+  total_reds: number;
+  total_points: number;
+  total_sets: number;
+  avg_rating: number | null;
+}
+
+export interface Team {
+  team_id: number;
+  name: string;
+  sport_id: number;
+  coach_id: number | null;
+  founded_year: number | null;
+  home_venue_id: number | null;
+  team_image_url: string | null;
+  status: string;
+  sport_name: string;
+  coach_name: string;
+  home_venue: string;
+  venue_name: string;
+  player_count?: number;
+}
+
+export interface MatchTeam {
+  team_id: number;
+  team_name: string;
+  score: number | null;
+  is_winner: number | null;
+  innings_1_score: number | null;
+  innings_2_score: number | null;
+  sets_won: number | null;
+}
+
+export interface Match {
+  match_id: number;
+  event_id: number | null;
+  venue_id: number | null;
+  match_date: string;
+  status: string;
+  round_name: string | null;
+  result_summary: string | null;
+  event_name: string | null;
+  sport_id: number | null;
+  sport_name: string | null;
+  venue_name: string | null;
+  teams: MatchTeam[];
+}
+
+export interface Event {
+  event_id: number;
+  name: string;
+  sport_id: number;
+  event_type: string;
+  format: string | null;
+  start_date: string;
+  end_date: string | null;
+  status: string;
+  description: string | null;
+  sport_name: string;
+  team_count?: number;
+}
+
+export interface Coach {
+  coach_id: number;
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  phone: string | null;
+  specialization: string | null;
+  experience_years: number;
+  team_count?: number;
+  team_names?: string | null;
+}
+
+export interface Venue {
+  venue_id: number;
+  name: string;
+  location: string;
+  capacity: number | null;
+  surface_type: string | null;
+  home_team_count?: number;
+  scheduled_match_count?: number;
+}
+
 // Dashboard
 export const getDashboardOverview = () =>
-  fetchJSON<{ total_players: number; total_teams: number; matches_completed: number; upcoming_matches: number }>("/dashboard/summary");
+  fetchJSON<DashboardSummary>("/dashboard/summary");
 
 export const getTopPlayers = (limit = 5) =>
-  fetchJSON<{ scorers: Array<{ player_id: number; first_name: string; last_name: string; team_name: string; sport_name: string; matches_played: number; avg_rating: number }>; grouped: Record<string, any> }>(`/dashboard/top-players?limit=${limit}`);
+  fetchJSON<{ players: TopPlayer[] }>(`/dashboard/top-players?limit=${limit}`);
 
 // Players
 export const getPlayers = () =>
-  fetchJSON<Array<{ player_id: number; first_name: string; last_name: string; email: string; date_of_birth: string; gender: string; team_id: number; jersey_number: number; position: string; status: string; team_name: string }>>("/players");
+  fetchJSON<Player[]>("/players");
 
 export const createPlayer = (data: Record<string, unknown>) =>
   fetchJSON("/players", { method: "POST", body: JSON.stringify(data) });
@@ -27,14 +155,14 @@ export const updatePlayer = (id: number, data: Record<string, unknown>) =>
   fetchJSON(`/players/${id}`, { method: "PUT", body: JSON.stringify(data) });
 
 export const getPlayerStats = (id: number) =>
-  fetchJSON<Array<Record<string, unknown>>>(`/players/${id}/stats`);
+  fetchJSON<PlayerStats>(`/players/${id}/stats`);
 
 export const deletePlayer = (id: number) =>
   fetchJSON(`/players/${id}`, { method: "DELETE" });
 
 // Teams
 export const getTeams = () =>
-  fetchJSON<Array<{ team_id: number; name: string; sport_id: number; coach_id: number; founded_year: number; home_venue_id: number; status: string; sport_name: string; coach_name: string; venue_name: string }>>("/teams");
+  fetchJSON<Team[]>("/teams");
 
 export const getTeam = (id: number) =>
   fetchJSON<Record<string, unknown>>(`/teams/${id}`);
@@ -53,7 +181,7 @@ export const addPlayerToTeam = (teamId: number, playerId: number) =>
 
 // Matches
 export const getMatches = () =>
-  fetchJSON<Array<{ match_id: number; event_id: number; venue_id: number; match_date: string; status: string; result_summary: string; event_name: string; sport_id: number; sport_name: string; venue_name: string; team1_id: number; team1_name: string; team1_score: number | null; team2_id: number; team2_name: string; team2_score: number | null; winner_team_id: number | null }>>("/matches");
+  fetchJSON<Match[]>("/matches");
 
 export const scheduleMatch = (data: Record<string, unknown>) =>
   fetchJSON("/matches", { method: "POST", body: JSON.stringify(data) });
@@ -76,7 +204,7 @@ export const getSports = () =>
 
 // Events
 export const getEvents = () =>
-  fetchJSON<Array<{ event_id: number; name: string; sport_id: number; event_type: string; format: string; start_date: string; end_date: string; status: string; description: string; sport_name: string }>>("/events");
+  fetchJSON<Event[]>("/events");
 
 export const createEvent = (data: Record<string, unknown>) =>
   fetchJSON("/events", { method: "POST", body: JSON.stringify(data) });
@@ -92,4 +220,26 @@ export const registerTeamToEvent = (eventId: number, teamId: number) =>
 
 // Coaches
 export const getCoaches = () =>
-  fetchJSON<Array<{ coach_id: number; first_name: string; last_name: string; email: string; phone: string; specialization: string; experience_years: number }>>("/coaches");
+  fetchJSON<Coach[]>("/coaches");
+
+export const createCoach = (data: Record<string, unknown>) =>
+  fetchJSON("/coaches", { method: "POST", body: JSON.stringify(data) });
+
+export const updateCoach = (id: number, data: Record<string, unknown>) =>
+  fetchJSON(`/coaches/${id}`, { method: "PUT", body: JSON.stringify(data) });
+
+export const deleteCoach = (id: number) =>
+  fetchJSON(`/coaches/${id}`, { method: "DELETE" });
+
+// Venues
+export const getVenues = () =>
+  fetchJSON<Venue[]>("/venues");
+
+export const createVenue = (data: Record<string, unknown>) =>
+  fetchJSON("/venues", { method: "POST", body: JSON.stringify(data) });
+
+export const updateVenue = (id: number, data: Record<string, unknown>) =>
+  fetchJSON(`/venues/${id}`, { method: "PUT", body: JSON.stringify(data) });
+
+export const deleteVenue = (id: number) =>
+  fetchJSON(`/venues/${id}`, { method: "DELETE" });
