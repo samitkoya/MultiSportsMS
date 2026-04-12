@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Pencil, Plus, Trash2 } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { CoachAvatar } from "@/components/CoachAvatar";
@@ -27,6 +27,7 @@ export default function CoachesPage() {
     experience_years: "",
     coach_image_url: "",
   });
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
 
   const { data: coaches, isLoading } = useQuery({ queryKey: ["coaches"], queryFn: getCoaches });
 
@@ -60,6 +61,40 @@ export default function CoachesPage() {
     },
     onError: () => toast.error("Failed to delete coach"),
   });
+
+  let sortedCoaches = coaches ? [...coaches] : [];
+  if (sortConfig) {
+    sortedCoaches.sort((a, b) => {
+      let valA: any = "";
+      let valB: any = "";
+      if (sortConfig.key === "coach") {
+        valA = `${a.first_name || ""} ${a.last_name || ""}`.toLowerCase();
+        valB = `${b.first_name || ""} ${b.last_name || ""}`.toLowerCase();
+      } else if (sortConfig.key === "specialization") {
+        valA = String(a.specialization || "").toLowerCase();
+        valB = String(b.specialization || "").toLowerCase();
+      } else if (sortConfig.key === "experience") {
+        valA = Number(a.experience_years) || 0;
+        valB = Number(b.experience_years) || 0;
+      }
+      if (valA < valB) return sortConfig.direction === "asc" ? -1 : 1;
+      if (valA > valB) return sortConfig.direction === "asc" ? 1 : -1;
+      return 0;
+    });
+  }
+
+  const handleSort = (key: string) => {
+    let direction: "asc" | "desc" = "asc";
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const SortIcon = ({ columnKey }: { columnKey: string }) => {
+    if (sortConfig?.key !== columnKey) return <ArrowUpDown size={14} className="opacity-50" />;
+    return sortConfig.direction === "asc" ? <ArrowUp size={14} /> : <ArrowDown size={14} />;
+  };
 
   const handleSave = () => {
     const body = {
@@ -109,9 +144,15 @@ export default function CoachesPage() {
         <Table>
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
-              <TableHead className="text-muted-foreground">Coach</TableHead>
-              <TableHead className="text-muted-foreground">Specialization</TableHead>
-              <TableHead className="text-muted-foreground">Experience</TableHead>
+              <TableHead className="text-muted-foreground cursor-pointer hover:text-foreground" onClick={() => handleSort("coach")}>
+                <div className="flex items-center gap-1">Coach <SortIcon columnKey="coach" /></div>
+              </TableHead>
+              <TableHead className="text-muted-foreground cursor-pointer hover:text-foreground" onClick={() => handleSort("specialization")}>
+                <div className="flex items-center gap-1">Specialization <SortIcon columnKey="specialization" /></div>
+              </TableHead>
+              <TableHead className="text-muted-foreground cursor-pointer hover:text-foreground" onClick={() => handleSort("experience")}>
+                <div className="flex items-center gap-1">Experience <SortIcon columnKey="experience" /></div>
+              </TableHead>
               <TableHead className="text-muted-foreground">Teams</TableHead>
               <TableHead className="text-right text-muted-foreground">Actions</TableHead>
             </TableRow>
@@ -119,8 +160,8 @@ export default function CoachesPage() {
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">Loading...</TableCell></TableRow>
-            ) : coaches && coaches.length > 0 ? (
-              coaches.map((coach) => (
+            ) : sortedCoaches && sortedCoaches.length > 0 ? (
+              sortedCoaches.map((coach) => (
                 <TableRow key={coach.coach_id} className="border-border">
                   <TableCell className="font-medium text-foreground">
                     <div className="flex items-center gap-3">

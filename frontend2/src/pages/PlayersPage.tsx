@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BarChart3, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, BarChart3, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import {
   type Player,
@@ -89,6 +89,7 @@ export default function PlayersPage() {
   const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
   const [selectedPlayerName, setSelectedPlayerName] = useState("");
   const [form, setForm] = useState<PlayerForm>(emptyForm);
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
 
   const { data: players, isLoading } = useQuery({ queryKey: ["players"], queryFn: getPlayers });
   const { data: teams } = useQuery({ queryKey: ["teams"], queryFn: getTeams });
@@ -137,6 +138,37 @@ export default function PlayersPage() {
       .toLowerCase()
       .includes(q);
   });
+
+  let sortedFiltered = filtered ? [...filtered] : [];
+  if (sortConfig) {
+    sortedFiltered.sort((a, b) => {
+      let valA = "";
+      let valB = "";
+      if (sortConfig.key === "name") {
+        valA = `${a.first_name || ""} ${a.last_name || ""}`.toLowerCase();
+        valB = `${b.first_name || ""} ${b.last_name || ""}`.toLowerCase();
+      } else if (sortConfig.key === "teams") {
+        valA = (a.team_names || "").toLowerCase();
+        valB = (b.team_names || "").toLowerCase();
+      }
+      if (valA < valB) return sortConfig.direction === "asc" ? -1 : 1;
+      if (valA > valB) return sortConfig.direction === "asc" ? 1 : -1;
+      return 0;
+    });
+  }
+
+  const handleSort = (key: string) => {
+    let direction: "asc" | "desc" = "asc";
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const SortIcon = ({ columnKey }: { columnKey: string }) => {
+    if (sortConfig?.key !== columnKey) return <ArrowUpDown size={14} className="opacity-50" />;
+    return sortConfig.direction === "asc" ? <ArrowUp size={14} /> : <ArrowDown size={14} />;
+  };
 
   const statusColor = (status: string) => {
     if (status === "active") return "bg-sport-green/20 text-sport-green border-sport-green/30";
@@ -258,8 +290,12 @@ export default function PlayersPage() {
         <Table>
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
-              <TableHead className="text-muted-foreground">Name</TableHead>
-              <TableHead className="text-muted-foreground">Teams</TableHead>
+              <TableHead className="text-muted-foreground cursor-pointer hover:text-foreground" onClick={() => handleSort("name")}>
+                <div className="flex items-center gap-1">Name <SortIcon columnKey="name" /></div>
+              </TableHead>
+              <TableHead className="text-muted-foreground cursor-pointer hover:text-foreground" onClick={() => handleSort("teams")}>
+                <div className="flex items-center gap-1">Teams <SortIcon columnKey="teams" /></div>
+              </TableHead>
               <TableHead className="text-muted-foreground">Active Memberships</TableHead>
               <TableHead className="text-muted-foreground">Status</TableHead>
               <TableHead className="text-muted-foreground text-right">Actions</TableHead>
@@ -270,8 +306,8 @@ export default function PlayersPage() {
               <TableRow>
                 <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">Loading...</TableCell>
               </TableRow>
-            ) : filtered && filtered.length > 0 ? (
-              filtered.map((player) => (
+            ) : sortedFiltered && sortedFiltered.length > 0 ? (
+              sortedFiltered.map((player) => (
                 <TableRow key={player.player_id} className="border-border">
                   <TableCell className="font-medium text-foreground">
                     <div className="flex items-center gap-3">

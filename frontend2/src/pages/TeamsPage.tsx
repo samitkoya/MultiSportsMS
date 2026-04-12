@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Search, Trash2, UserPlus } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Pencil, Plus, Search, Trash2, UserPlus } from "lucide-react";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import {
   addPlayerToTeam,
@@ -85,6 +85,7 @@ export default function TeamsPage() {
   const [assignOpen, setAssignOpen] = useState(false);
   const [form, setForm] = useState<TeamForm>(emptyTeamForm);
   const [assignForm, setAssignForm] = useState<AssignForm>(emptyAssignForm);
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
 
   const { data: teams, isLoading } = useQuery({ queryKey: ["teams"], queryFn: getTeams });
   const { data: sports } = useQuery({ queryKey: ["sports"], queryFn: getSports });
@@ -147,6 +148,40 @@ export default function TeamsPage() {
     const q = search.toLowerCase();
     return `${team.name} ${team.sport_name} ${team.coach_name} ${team.home_venue}`.toLowerCase().includes(q);
   });
+
+  let sortedFiltered = filtered ? [...filtered] : [];
+  if (sortConfig) {
+    sortedFiltered.sort((a, b) => {
+      let valA = "";
+      let valB = "";
+      if (sortConfig.key === "name") {
+        valA = String(a.name || "").toLowerCase();
+        valB = String(b.name || "").toLowerCase();
+      } else if (sortConfig.key === "sport") {
+        valA = String(a.sport_name || "").toLowerCase();
+        valB = String(b.sport_name || "").toLowerCase();
+      } else if (sortConfig.key === "coach") {
+        valA = String(a.coach_name || "").toLowerCase();
+        valB = String(b.coach_name || "").toLowerCase();
+      }
+      if (valA < valB) return sortConfig.direction === "asc" ? -1 : 1;
+      if (valA > valB) return sortConfig.direction === "asc" ? 1 : -1;
+      return 0;
+    });
+  }
+
+  const handleSort = (key: string) => {
+    let direction: "asc" | "desc" = "asc";
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const SortIcon = ({ columnKey }: { columnKey: string }) => {
+    if (sortConfig?.key !== columnKey) return <ArrowUpDown size={14} className="opacity-50" />;
+    return sortConfig.direction === "asc" ? <ArrowUp size={14} /> : <ArrowDown size={14} />;
+  };
 
   const selectedTeam = teams?.find((team) => team.team_id === selectedTeamId) || null;
 
@@ -253,9 +288,15 @@ export default function TeamsPage() {
         <Table>
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
-              <TableHead className="text-muted-foreground">Team</TableHead>
-              <TableHead className="text-muted-foreground">Sport</TableHead>
-              <TableHead className="text-muted-foreground">Coach</TableHead>
+              <TableHead className="text-muted-foreground cursor-pointer hover:text-foreground" onClick={() => handleSort("name")}>
+                <div className="flex items-center gap-1">Team <SortIcon columnKey="name" /></div>
+              </TableHead>
+              <TableHead className="text-muted-foreground cursor-pointer hover:text-foreground" onClick={() => handleSort("sport")}>
+                <div className="flex items-center gap-1">Sport <SortIcon columnKey="sport" /></div>
+              </TableHead>
+              <TableHead className="text-muted-foreground cursor-pointer hover:text-foreground" onClick={() => handleSort("coach")}>
+                <div className="flex items-center gap-1">Coach <SortIcon columnKey="coach" /></div>
+              </TableHead>
               <TableHead className="text-muted-foreground">Players</TableHead>
               <TableHead className="text-muted-foreground">Status</TableHead>
               <TableHead className="text-muted-foreground text-right">Actions</TableHead>
@@ -266,8 +307,8 @@ export default function TeamsPage() {
               <TableRow>
                 <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">Loading...</TableCell>
               </TableRow>
-            ) : filtered && filtered.length > 0 ? (
-              filtered.map((team) => (
+            ) : sortedFiltered && sortedFiltered.length > 0 ? (
+              sortedFiltered.map((team) => (
                 <TableRow key={team.team_id} className="border-border">
                   <TableCell className="font-medium text-foreground">
                     <div className="flex items-center gap-3">
