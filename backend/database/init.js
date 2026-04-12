@@ -181,6 +181,7 @@ class DatabaseWrapper {
      */
     exec(sql) {
         this._db.run(sql);
+        this.save();
     }
 
     /**
@@ -189,6 +190,7 @@ class DatabaseWrapper {
      */
     prepare(sql) {
         const db = this._db;
+        const self = this;
 
         return {
             /**
@@ -251,6 +253,8 @@ class DatabaseWrapper {
                 const lastInsertRowid = db.exec("SELECT last_insert_rowid() AS id")[0]?.values[0]?.[0] || 0;
                 const changes = db.exec("SELECT changes() AS c")[0]?.values[0]?.[0] || 0;
 
+                self.save();
+
                 return { lastInsertRowid, changes };
             }
         };
@@ -277,6 +281,7 @@ class DatabaseWrapper {
             try {
                 const result = fn.apply(null, args);
                 self._db.run('COMMIT');
+                self.save();
                 return result;
             } catch (err) {
                 self._db.run('ROLLBACK');
