@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, Pencil, ShieldPlus } from "lucide-react";
+import { Plus, Trash2, Pencil, ShieldPlus, ArrowUp, ArrowDown } from "lucide-react";
 import { getEvents, getEvent, getSports, getTeams, createEvent, updateEvent, deleteEvent, registerTeamToEvent } from "@/lib/api";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
@@ -30,6 +30,8 @@ export default function TournamentsPage() {
   const [assignTeamId, setAssignTeamId] = useState("");
 
   const [form, setForm] = useState({ name: "", sport_id: "", format: "", start_date: "", end_date: "", status: "upcoming", description: "", event_image_url: "" });
+
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
 
   const { data: events, isLoading } = useQuery({ queryKey: ["events"], queryFn: getEvents });
   const { data: sports } = useQuery({ queryKey: ["sports"], queryFn: getSports });
@@ -135,6 +137,39 @@ export default function TournamentsPage() {
     }
   };
 
+  const handleSort = (key: string) => {
+    let direction: "asc" | "desc" = "asc";
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const SortIcon = ({ column }: { column: string }) => {
+    if (!sortConfig || sortConfig.key !== column) return <ArrowUp size={14} className="ml-1 opacity-20" />;
+    return sortConfig.direction === "asc" ? <ArrowUp size={14} className="ml-1 text-primary" /> : <ArrowDown size={14} className="ml-1 text-primary" />;
+  };
+
+  const sortedEvents = [...(events || [])].sort((a, b) => {
+    if (!sortConfig) return 0;
+    const { key, direction } = sortConfig;
+    
+    let aValue: any = a[key as keyof typeof a];
+    let bValue: any = b[key as keyof typeof b];
+
+    if (key === 'start_date' || key === 'end_date') {
+      aValue = aValue ? new Date(aValue).getTime() : 0;
+      bValue = bValue ? new Date(bValue).getTime() : 0;
+    } else {
+      aValue = (aValue || "").toString().toLowerCase();
+      bValue = (bValue || "").toString().toLowerCase();
+    }
+
+    if (aValue < bValue) return direction === "asc" ? -1 : 1;
+    if (aValue > bValue) return direction === "asc" ? 1 : -1;
+    return 0;
+  });
+
   return (
     <AppLayout>
       <PageHeader title="Tournaments" description="Events and tournaments across all sports">
@@ -146,20 +181,50 @@ export default function TournamentsPage() {
         <Table>
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
-              <TableHead className="text-muted-foreground">Tournament</TableHead>
-              <TableHead className="text-muted-foreground">Sport</TableHead>
-              <TableHead className="text-muted-foreground">Format</TableHead>
-              <TableHead className="text-muted-foreground">Start</TableHead>
-              <TableHead className="text-muted-foreground">End</TableHead>
-              <TableHead className="text-muted-foreground">Status</TableHead>
+              <TableHead 
+                className="text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                onClick={() => handleSort('name')}
+              >
+                <div className="flex items-center">Tournament <SortIcon column="name" /></div>
+              </TableHead>
+              <TableHead 
+                className="text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                onClick={() => handleSort('sport_name')}
+              >
+                <div className="flex items-center">Sport <SortIcon column="sport_name" /></div>
+              </TableHead>
+              <TableHead 
+                className="text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                onClick={() => handleSort('format')}
+              >
+                <div className="flex items-center">Format <SortIcon column="format" /></div>
+              </TableHead>
+              <TableHead 
+                className="text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                onClick={() => handleSort('start_date')}
+              >
+                <div className="flex items-center">Start <SortIcon column="start_date" /></div>
+              </TableHead>
+              <TableHead 
+                className="text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                onClick={() => handleSort('end_date')}
+              >
+                <div className="flex items-center">End <SortIcon column="end_date" /></div>
+              </TableHead>
+              <TableHead 
+                className="text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                onClick={() => handleSort('status')}
+              >
+                <div className="flex items-center">Status <SortIcon column="status" /></div>
+              </TableHead>
               <TableHead className="text-muted-foreground text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Loading...</TableCell></TableRow>
-            ) : events && events.length > 0 ? (
-              events.map((e) => {
+            ) : sortedEvents && sortedEvents.length > 0 ? (
+              sortedEvents.map((e) => {
                 const status = eventStatus(e);
                 return (
                   <TableRow key={e.event_id} className="border-border">

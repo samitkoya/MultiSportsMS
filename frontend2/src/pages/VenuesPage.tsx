@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ export default function VenuesPage() {
     capacity: "",
     surface_type: "",
   });
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
 
   const { data: venues, isLoading } = useQuery({ queryKey: ["venues"], queryFn: getVenues });
 
@@ -92,6 +93,39 @@ export default function VenuesPage() {
     setCreateOpen(true);
   };
 
+  const handleSort = (key: string) => {
+    let direction: "asc" | "desc" = "asc";
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const SortIcon = ({ column }: { column: string }) => {
+    if (!sortConfig || sortConfig.key !== column) return <ArrowUp size={14} className="ml-1 opacity-20" />;
+    return sortConfig.direction === "asc" ? <ArrowUp size={14} className="ml-1 text-primary" /> : <ArrowDown size={14} className="ml-1 text-primary" />;
+  };
+
+  const sortedVenues = [...(venues || [])].sort((a, b) => {
+    if (!sortConfig) return 0;
+    const { key, direction } = sortConfig;
+    
+    let aValue: any = a[key as keyof Venue];
+    let bValue: any = b[key as keyof Venue];
+
+    if (key === 'capacity') {
+      aValue = aValue || 0;
+      bValue = bValue || 0;
+    } else {
+      aValue = (aValue || "").toString().toLowerCase();
+      bValue = (bValue || "").toString().toLowerCase();
+    }
+
+    if (aValue < bValue) return direction === "asc" ? -1 : 1;
+    if (aValue > bValue) return direction === "asc" ? 1 : -1;
+    return 0;
+  });
+
   return (
     <AppLayout>
       <PageHeader title="Venues" description="Manage stadiums, courts, and playing grounds">
@@ -104,9 +138,24 @@ export default function VenuesPage() {
         <Table>
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
-              <TableHead className="text-muted-foreground">Venue</TableHead>
-              <TableHead className="text-muted-foreground">Surface</TableHead>
-              <TableHead className="text-muted-foreground">Capacity</TableHead>
+              <TableHead 
+                className="text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                onClick={() => handleSort('name')}
+              >
+                <div className="flex items-center">Venue <SortIcon column="name" /></div>
+              </TableHead>
+              <TableHead 
+                className="text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                onClick={() => handleSort('surface_type')}
+              >
+                <div className="flex items-center">Surface <SortIcon column="surface_type" /></div>
+              </TableHead>
+              <TableHead 
+                className="text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                onClick={() => handleSort('capacity')}
+              >
+                <div className="flex items-center">Capacity <SortIcon column="capacity" /></div>
+              </TableHead>
               <TableHead className="text-muted-foreground">Usage</TableHead>
               <TableHead className="text-right text-muted-foreground">Actions</TableHead>
             </TableRow>
@@ -114,8 +163,8 @@ export default function VenuesPage() {
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">Loading...</TableCell></TableRow>
-            ) : venues && venues.length > 0 ? (
-              venues.map((venue) => (
+            ) : sortedVenues && sortedVenues.length > 0 ? (
+              sortedVenues.map((venue) => (
                 <TableRow key={venue.venue_id} className="border-border">
                   <TableCell className="font-medium text-foreground">
                     <div>{venue.name}</div>

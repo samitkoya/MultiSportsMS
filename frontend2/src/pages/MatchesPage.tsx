@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, Pencil, ClipboardCheck, Activity } from "lucide-react";
+import { Plus, Trash2, Pencil, ClipboardCheck, Activity, ArrowUp, ArrowDown } from "lucide-react";
 import { getMatches, logMatchResult, logMatchScore, scheduleMatch, updateMatchStatus, deleteMatch, getEvents, getEvent, getSports, getTeams, getPlayers, getMatchDetails, savePlayerMatchStats, type Match } from "@/lib/api";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
@@ -58,6 +58,7 @@ export default function MatchesPage() {
       team2_wickets: t2?.wickets ?? "",
     };
   });
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
   const { data: events } = useQuery({ queryKey: ["events"], queryFn: getEvents });
   const { data: teams } = useQuery({ queryKey: ["teams"], queryFn: getTeams });
   const { data: sports } = useQuery({ queryKey: ["sports"], queryFn: getSports });
@@ -252,6 +253,39 @@ export default function MatchesPage() {
     statsMut.mutate({ matchId: selectedMatch.match_id, body: { ...statsForm, player_id: Number(statsForm.player_id) } });
   };
 
+  const handleSort = (key: string) => {
+    let direction: "asc" | "desc" = "asc";
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const SortIcon = ({ column }: { column: string }) => {
+    if (!sortConfig || sortConfig.key !== column) return <ArrowUp size={14} className="ml-1 opacity-20" />;
+    return sortConfig.direction === "asc" ? <ArrowUp size={14} className="ml-1 text-primary" /> : <ArrowDown size={14} className="ml-1 text-primary" />;
+  };
+
+  const sortedMatches = [...(matches || [])].sort((a, b) => {
+    if (!sortConfig) return 0;
+    const { key, direction } = sortConfig;
+    
+    let aValue: any = a[key as keyof MatchExtended];
+    let bValue: any = b[key as keyof MatchExtended];
+
+    if (key === 'match_date') {
+      aValue = new Date(aValue).getTime();
+      bValue = new Date(bValue).getTime();
+    } else {
+      aValue = (aValue || "").toString().toLowerCase();
+      bValue = (bValue || "").toString().toLowerCase();
+    }
+
+    if (aValue < bValue) return direction === "asc" ? -1 : 1;
+    if (aValue > bValue) return direction === "asc" ? 1 : -1;
+    return 0;
+  });
+
   return (
     <AppLayout>
       <PageHeader title="Matches" description="View and manage all matches">
@@ -263,19 +297,39 @@ export default function MatchesPage() {
         <Table>
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
-              <TableHead className="text-muted-foreground">Match</TableHead>
-              <TableHead className="text-muted-foreground">Sport</TableHead>
+              <TableHead 
+                className="text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                onClick={() => handleSort('team1_name')}
+              >
+                <div className="flex items-center">Match <SortIcon column="team1_name" /></div>
+              </TableHead>
+              <TableHead 
+                className="text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                onClick={() => handleSort('sport_name')}
+              >
+                <div className="flex items-center">Sport <SortIcon column="sport_name" /></div>
+              </TableHead>
               <TableHead className="text-muted-foreground text-center">Score</TableHead>
-              <TableHead className="text-muted-foreground">Date</TableHead>
-              <TableHead className="text-muted-foreground">Status</TableHead>
+              <TableHead 
+                className="text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                onClick={() => handleSort('match_date')}
+              >
+                <div className="flex items-center">Date <SortIcon column="match_date" /></div>
+              </TableHead>
+              <TableHead 
+                className="text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                onClick={() => handleSort('status')}
+              >
+                <div className="flex items-center">Status <SortIcon column="status" /></div>
+              </TableHead>
               <TableHead className="text-muted-foreground text-right">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Loading...</TableCell></TableRow>
-            ) : matches && matches.length > 0 ? (
-              matches.map((m) => (
+            ) : sortedMatches && sortedMatches.length > 0 ? (
+              sortedMatches.map((m) => (
                 <TableRow key={m.match_id} className="border-border">
                   <TableCell className="font-medium text-foreground">
                     <p>{m.team1_name} vs {m.team2_name}</p>
