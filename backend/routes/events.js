@@ -18,7 +18,7 @@ router.get('/', (req, res) => {
         let sql = `
             SELECT 
                 e.event_id, e.name, e.event_type, e.format,
-                e.start_date, e.end_date, e.status, e.description, e.created_at,
+                e.start_date, e.end_date, e.status, e.description, e.created_at, e.event_image_url,
                 s.sport_id, s.name AS sport_name,
                 COUNT(et.team_id) AS team_count
             FROM events e
@@ -101,16 +101,16 @@ router.get('/:id', (req, res) => {
 router.post('/', (req, res) => {
     try {
         const db = req.app.locals.db;
-        const { name, sport_id, event_type, format, start_date, end_date, description } = req.body;
+        const { name, sport_id, event_type, format, start_date, end_date, description, event_image_url } = req.body;
 
         if (!name || !sport_id || !start_date) {
             return res.status(400).json({ error: 'Name, sport, and start date are required' });
         }
 
         const result = db.prepare(`
-            INSERT INTO events (name, sport_id, event_type, format, start_date, end_date, description)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        `).run(name, sport_id, event_type || 'tournament', format || null, start_date, end_date || null, description || null);
+            INSERT INTO events (name, sport_id, event_type, format, start_date, end_date, description, event_image_url)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(name, sport_id, event_type || 'tournament', format || null, start_date, end_date || null, description || null, event_image_url || null);
 
         const event = db.prepare('SELECT * FROM events WHERE event_id = ?').get(result.lastInsertRowid);
         res.status(201).json(event);
@@ -124,7 +124,7 @@ router.post('/', (req, res) => {
 router.put('/:id', (req, res) => {
     try {
         const db = req.app.locals.db;
-        const { name, event_type, format, start_date, end_date, status, description } = req.body;
+        const { name, event_type, format, start_date, end_date, status, description, event_image_url } = req.body;
 
         const existing = db.prepare('SELECT * FROM events WHERE event_id = ?').get(req.params.id);
         if (!existing) return res.status(404).json({ error: 'Event not found' });
@@ -132,7 +132,7 @@ router.put('/:id', (req, res) => {
         db.prepare(`
             UPDATE events 
             SET name = ?, event_type = ?, format = ?, start_date = ?, 
-                end_date = ?, status = ?, description = ?
+                end_date = ?, status = ?, description = ?, event_image_url = ?
             WHERE event_id = ?
         `).run(
             name || existing.name,
@@ -142,6 +142,7 @@ router.put('/:id', (req, res) => {
             end_date !== undefined ? end_date : existing.end_date,
             status || existing.status,
             description !== undefined ? description : existing.description,
+            event_image_url !== undefined ? event_image_url : existing.event_image_url,
             req.params.id
         );
 

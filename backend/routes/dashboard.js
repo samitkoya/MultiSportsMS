@@ -24,6 +24,7 @@ router.get('/summary', (req, res) => {
             total_venues:   db.prepare('SELECT COUNT(*) AS c FROM venues').get().c,
             upcoming_matches: db.prepare("SELECT COUNT(*) AS c FROM matches WHERE status = 'scheduled'").get().c,
             completed_matches: db.prepare("SELECT COUNT(*) AS c FROM matches WHERE status = 'completed'").get().c,
+            matches_completed: db.prepare("SELECT COUNT(*) AS c FROM matches WHERE status = 'completed'").get().c,
             ongoing_events: db.prepare("SELECT COUNT(*) AS c FROM events WHERE status = 'ongoing'").get().c,
         };
 
@@ -86,6 +87,34 @@ router.get('/upcoming', (req, res) => {
     }
 });
 
+// GET /api/dashboard/top-players — Top rated players
+router.get('/top-players', (req, res) => {
+    try {
+        const db = req.app.locals.db;
+        const limit = Math.max(1, Math.min(Number(req.query.limit) || 5, 50));
+
+        const players = db.prepare(`
+            SELECT
+                p.player_id,
+                p.first_name,
+                p.last_name,
+                vps.team_name,
+                vps.sport_name,
+                vps.matches_played,
+                COALESCE(vps.avg_rating, 0) AS avg_rating
+            FROM v_player_statistics vps
+            JOIN players p ON p.player_id = vps.player_id
+            WHERE p.is_deleted = 0
+            ORDER BY avg_rating DESC, matches_played DESC, p.last_name, p.first_name
+            LIMIT ?
+        `).all(limit);
+
+        res.json({ players });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // GET /api/dashboard/top-scorers — Top performers per sport
 // SQL: VIEW v_top_scorers
 router.get('/top-scorers', (req, res) => {
@@ -130,14 +159,26 @@ router.get('/recent-results', (req, res) => {
             LIMIT 5
         `).all();
 
-        // Attach team scores
-        for (const match of results) {
-            match.teams = db.prepare(`
-                SELECT mt.team_id, t.name AS team_name, mt.score, mt.is_winner
+        const matchIds = results.map((match) => match.match_id);
+        if (matchIds.length > 0) {
+            const placeholders = matchIds.map(() => '?').join(', ');
+            const teams = db.prepare(`
+                SELECT mt.match_id, mt.team_id, t.name AS team_name, mt.score, mt.is_winner
                 FROM match_teams mt
                 JOIN teams t ON mt.team_id = t.team_id
-                WHERE mt.match_id = ?
-            `).all(match.match_id);
+                WHERE mt.match_id IN (${placeholders})
+                ORDER BY mt.match_id, mt.team_id
+            `).all(...matchIds);
+
+            const teamsByMatch = teams.reduce((acc, team) => {
+                if (!acc[team.match_id]) acc[team.match_id] = [];
+                acc[team.match_id].push(team);
+                return acc;
+            }, {});
+
+            for (const match of results) {
+                match.teams = teamsByMatch[match.match_id] || [];
+            }
         }
 
         res.json(results);

@@ -4,6 +4,7 @@ import { Plus, Trash2, Pencil, ShieldPlus } from "lucide-react";
 import { getEvents, getSports, getTeams, createEvent, updateEvent, deleteEvent, registerTeamToEvent } from "@/lib/api";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
+import { EventAvatar } from "@/components/EventAvatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,11 +25,11 @@ export default function TournamentsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
-  
+
   const [assignOpen, setAssignOpen] = useState(false);
   const [assignTeamId, setAssignTeamId] = useState("");
 
-  const [form, setForm] = useState({ name: "", sport_id: "", format: "", start_date: "", end_date: "", status: "scheduled", description: "" });
+  const [form, setForm] = useState({ name: "", sport_id: "", format: "", start_date: "", end_date: "", status: "upcoming", description: "", event_image_url: "" });
 
   const { data: events, isLoading } = useQuery({ queryKey: ["events"], queryFn: getEvents });
   const { data: sports } = useQuery({ queryKey: ["sports"], queryFn: getSports });
@@ -65,7 +66,7 @@ export default function TournamentsPage() {
     const end = new Date(e.end_date);
     if (now > end) return "completed";
     if (now >= start && now <= end) return "ongoing";
-    return "scheduled";
+    return "upcoming";
   };
 
   const statusStyle = (s: string) => {
@@ -82,19 +83,18 @@ export default function TournamentsPage() {
     if (isEdit && selectedEventId) {
       updateMut.mutate({ id: selectedEventId, body: data });
     } else {
-      createMut.mutate(data as any);
+      createMut.mutate(data);
     }
   };
 
   const openCreate = () => {
     setIsEdit(false);
     setSelectedEventId(null);
-    setForm({ name: "", sport_id: "", format: "", start_date: "", end_date: "", status: "scheduled", description: "" });
+    setForm({ name: "", sport_id: "", format: "", start_date: "", end_date: "", status: "upcoming", description: "", event_image_url: "" });
     setCreateOpen(true);
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const openEdit = (e: any) => {
+  const openEdit = (e: { event_id: number; name: string; sport_id: number; format: string | null; start_date: string; end_date: string | null; status: string; description: string | null; event_image_url: string | null }) => {
     setIsEdit(true);
     setSelectedEventId(e.event_id);
     setForm({
@@ -103,8 +103,9 @@ export default function TournamentsPage() {
       format: e.format || "",
       start_date: e.start_date ? new Date(e.start_date).toISOString().split('T')[0] : "",
       end_date: e.end_date ? new Date(e.end_date).toISOString().split('T')[0] : "",
-      status: e.status || "scheduled",
+      status: e.status || "upcoming",
       description: e.description || "",
+      event_image_url: e.event_image_url || "",
     });
     setCreateOpen(true);
   };
@@ -150,9 +151,12 @@ export default function TournamentsPage() {
                 return (
                   <TableRow key={e.event_id} className="border-border">
                     <TableCell>
-                      <div>
-                        <p className="font-medium text-foreground">{e.name}</p>
-                        {e.description && <p className="text-xs text-muted-foreground mt-0.5">{e.description}</p>}
+                      <div className="flex items-center gap-3">
+                        <EventAvatar src={e.event_image_url} alt={e.name} />
+                        <div>
+                          <div>{e.name}</div>
+                          <div className="text-xs text-muted-foreground mt-0.5">{e.description || "No description"}</div>
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell><Badge variant="secondary">{e.sport_name}</Badge></TableCell>
@@ -202,12 +206,18 @@ export default function TournamentsPage() {
             <DialogTitle className="text-foreground">{isEdit ? "Edit Tournament" : "Create Tournament"}</DialogTitle>
             <DialogDescription>Fill in tournament details below.</DialogDescription>
           </DialogHeader>
-           <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label>Name</Label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="bg-secondary border-border" />
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Name</Label>
+                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="bg-secondary border-border" />
+              </div>
+              <div className="space-y-2">
+                <Label>Event Image URL</Label>
+                <Input value={form.event_image_url} onChange={(e) => setForm({ ...form, event_image_url: e.target.value })} className="bg-secondary border-border" />
+              </div>            
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Sport</Label>
@@ -251,9 +261,10 @@ export default function TournamentsPage() {
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="scheduled">Scheduled</SelectItem>
+                  <SelectItem value="upcoming">Upcoming</SelectItem>
                   <SelectItem value="ongoing">Ongoing</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -281,7 +292,10 @@ export default function TournamentsPage() {
                   <SelectValue placeholder="Select team" />
                 </SelectTrigger>
                 <SelectContent>
-                  {teams?.map((t) => (
+                  {teams?.filter((t) => {
+                    const selectedEvent = events?.find((event) => event.event_id === selectedEventId);
+                    return !selectedEvent || t.sport_id === selectedEvent.sport_id;
+                  }).map((t) => (
                     <SelectItem key={t.team_id} value={String(t.team_id)}>{t.name} ({t.sport_name})</SelectItem>
                   ))}
                 </SelectContent>

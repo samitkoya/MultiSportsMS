@@ -16,7 +16,7 @@ router.get('/', (req, res) => {
         const coaches = db.prepare(`
             SELECT 
                 c.coach_id, c.first_name, c.last_name, c.email, c.phone,
-                c.specialization, c.experience_years, c.created_at,
+                c.specialization, c.experience_years, c.coach_image_url, c.created_at,
                 COUNT(t.team_id) AS team_count,
                 GROUP_CONCAT(t.name, ', ') AS team_names
             FROM coaches c
@@ -37,7 +37,7 @@ router.get('/:id', (req, res) => {
         const db = req.app.locals.db;
         const coach = db.prepare(`
             SELECT coach_id, first_name, last_name, email, phone,
-                   specialization, experience_years, created_at
+                   specialization, experience_years, coach_image_url, created_at
             FROM coaches WHERE coach_id = ?
         `).get(req.params.id);
 
@@ -62,16 +62,16 @@ router.get('/:id', (req, res) => {
 router.post('/', (req, res) => {
     try {
         const db = req.app.locals.db;
-        const { first_name, last_name, email, phone, specialization, experience_years } = req.body;
+        const { first_name, last_name, email, phone, specialization, experience_years, coach_image_url } = req.body;
 
         if (!first_name || !last_name) {
             return res.status(400).json({ error: 'First name and last name are required' });
         }
 
         const result = db.prepare(`
-            INSERT INTO coaches (first_name, last_name, email, phone, specialization, experience_years)
-            VALUES (?, ?, ?, ?, ?, ?)
-        `).run(first_name, last_name, email || null, phone || null, specialization || null, experience_years || 0);
+            INSERT INTO coaches (first_name, last_name, email, phone, specialization, experience_years, coach_image_url)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        `).run(first_name, last_name, email || null, phone || null, specialization || null, experience_years || 0, coach_image_url || null);
 
         const coach = db.prepare('SELECT * FROM coaches WHERE coach_id = ?').get(result.lastInsertRowid);
         res.status(201).json(coach);
@@ -88,7 +88,7 @@ router.post('/', (req, res) => {
 router.put('/:id', (req, res) => {
     try {
         const db = req.app.locals.db;
-        const { first_name, last_name, email, phone, specialization, experience_years } = req.body;
+        const { first_name, last_name, email, phone, specialization, experience_years, coach_image_url } = req.body;
 
         const existing = db.prepare('SELECT * FROM coaches WHERE coach_id = ?').get(req.params.id);
         if (!existing) return res.status(404).json({ error: 'Coach not found' });
@@ -96,7 +96,7 @@ router.put('/:id', (req, res) => {
         db.prepare(`
             UPDATE coaches 
             SET first_name = ?, last_name = ?, email = ?, phone = ?, 
-                specialization = ?, experience_years = ?
+                specialization = ?, experience_years = ?, coach_image_url = ?
             WHERE coach_id = ?
         `).run(
             first_name || existing.first_name,
@@ -105,6 +105,7 @@ router.put('/:id', (req, res) => {
             phone !== undefined ? phone : existing.phone,
             specialization !== undefined ? specialization : existing.specialization,
             experience_years !== undefined ? experience_years : existing.experience_years,
+            coach_image_url !== undefined ? coach_image_url : existing.coach_image_url,
             req.params.id
         );
 
