@@ -105,6 +105,7 @@ export interface MatchTeam {
   is_winner: number | null;
   innings_1_score: number | null;
   innings_2_score: number | null;
+  wickets: number | null;
   sets_won: number | null;
 }
 
@@ -220,7 +221,7 @@ export const getMatches = () =>
 export const scheduleMatch = (data: Record<string, unknown>) =>
   fetchJSON("/matches", { method: "POST", body: JSON.stringify(data) });
 
-export const logMatchScore = (id: number, teamId: number, data: { score?: number; innings_1_score?: number; innings_2_score?: number; sets_won?: number }) =>
+export const logMatchScore = (id: number, teamId: number, data: { score?: number; innings_1_score?: number; innings_2_score?: number; wickets?: number; sets_won?: number }) =>
   fetchJSON(`/matches/${id}/score`, { method: "PUT", body: JSON.stringify({ team_id: teamId, ...data }) });
 
 export const logMatchResult = (id: number, data: { team1_id: number; team1_score: number; team2_id: number; team2_score: number; winner_team_id: number; result_summary: string }) =>

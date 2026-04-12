@@ -49,9 +49,12 @@ This will create a `backend/database/msms.db` file.
 
 ## 🏗️ Step 3: Build the Frontend (Crucial for Running)
 
-The backend server is configured to serve the **production build** of the React/Vite frontend. You must build it before starting the server.
+The backend server is configured to serve the **production build** of the React/Vite frontend. You must build it before starting the server. 
+
+> **Important:** Ensure you are in the **Root Directory** (`MultiSportsMS/`), NOT the `frontend2/` directory, before running these commands.
 
 ```bash
+# Run this from the root directory
 npm run build:frontend
 ```
 
@@ -59,9 +62,10 @@ npm run build:frontend
 
 ## 🚀 Step 4: Run the Application
 
-Now you can start the combined backend-frontend server:
+Now you can start the combined backend-frontend server. Again, make sure you are in the **Root Directory**.
 
 ```bash
+# Run this from the root directory
 npm start
 ```
 By default, the application will be available at: **[http://localhost:3000](http://localhost:3000)**

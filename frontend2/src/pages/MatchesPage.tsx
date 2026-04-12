@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Pencil, ClipboardCheck, Activity } from "lucide-react";
-import { getMatches, logMatchResult, logMatchScore, scheduleMatch, updateMatchStatus, deleteMatch, getEvents, getTeams, getPlayers, getMatchDetails, savePlayerMatchStats, type Match } from "@/lib/api";
+import { getMatches, logMatchResult, logMatchScore, scheduleMatch, updateMatchStatus, deleteMatch, getEvents, getEvent, getSports, getTeams, getPlayers, getMatchDetails, savePlayerMatchStats, type Match } from "@/lib/api";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { Badge } from "@/components/ui/badge";
@@ -28,30 +28,44 @@ const getScoreLabel = (sportName: string) => {
   return "Points";
 };
 
+interface MatchExtended extends Match {
+  team1_id?: number;
+  team1_name?: string;
+  team1_score?: number | string;
+  team1_wickets?: number | string;
+  team2_id?: number;
+  team2_name?: string;
+  team2_score?: number | string;
+  team2_wickets?: number | string;
+}
+
 export default function MatchesPage() {
   const qc = useQueryClient();
   const { data: rawMatches, isLoading } = useQuery({ queryKey: ["matches"], queryFn: getMatches });
   
-  const matches = rawMatches?.map(m => {
+  const matches: MatchExtended[] | undefined = rawMatches?.map(m => {
     const t1 = m.teams?.[0];
     const t2 = m.teams?.[1];
     return {
       ...m,
       team1_id: t1?.team_id,
       team1_name: t1?.team_name,
-      team1_score: t1?.score ?? t1?.sets_won ?? t1?.innings_1_score,
+      team1_score: t1?.score ?? t1?.sets_won ?? t1?.innings_1_score ?? "",
+      team1_wickets: t1?.wickets ?? "",
       team2_id: t2?.team_id,
       team2_name: t2?.team_name,
-      team2_score: t2?.score ?? t2?.sets_won ?? t2?.innings_1_score,
+      team2_score: t2?.score ?? t2?.sets_won ?? t2?.innings_1_score ?? "",
+      team2_wickets: t2?.wickets ?? "",
     };
   });
   const { data: events } = useQuery({ queryKey: ["events"], queryFn: getEvents });
   const { data: teams } = useQuery({ queryKey: ["teams"], queryFn: getTeams });
+  const { data: sports } = useQuery({ queryKey: ["sports"], queryFn: getSports });
 
   const [resultOpen, setResultOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
-  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
-  const [scores, setScores] = useState({ team1_score: "", team2_score: "" });
+  const [selectedMatch, setSelectedMatch] = useState<MatchExtended | null>(null);
+  const [scores, setScores] = useState({ team1_score: "", team2_score: "", team1_wickets: "", team2_wickets: "", team1_sets: "", team2_sets: "" });
   const [selectedTeamId, setSelectedTeamId] = useState("");
   const [statsForm, setStatsForm] = useState<any>({ player_id: "" });
 
@@ -64,56 +78,96 @@ export default function MatchesPage() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
-  const [form, setForm] = useState({ event_id: "standalone", match_date: "", team1_id: "", team2_id: "", status: "scheduled", round_name: "" });
+  const [form, setForm] = useState({ event_id: "standalone", sport_id: "", match_date: "", team1_id: "", team2_id: "", status: "scheduled", round_name: "" });
+
+  const { data: eventData } = useQuery({
+    queryKey: ["event", form.event_id],
+    queryFn: () => getEvent(Number(form.event_id)),
+    enabled: form.event_id !== "standalone" && !!form.event_id,
+  });
 
   const createMut = useMutation({
     mutationFn: scheduleMatch,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["matches"] }); setCreateOpen(false); toast.success("Match scheduled"); },
-    onError: () => toast.error("Failed to schedule match"),
+    onSuccess: () => { 
+      qc.invalidateQueries({ queryKey: ["matches"] }); 
+      qc.invalidateQueries({ queryKey: ["dashboard-overview"] });
+      setCreateOpen(false); 
+      toast.success("Match scheduled"); 
+    },
+    onError: (err: any) => toast.error(err.message || "Failed to schedule match"),
   });
 
   const updateMut = useMutation({
-    mutationFn: (data: { id: number; body: object }) => updateMatchStatus(data.id, data.body),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["matches"] }); setCreateOpen(false); toast.success("Match updated"); },
-    onError: () => toast.error("Failed to update match"),
+    mutationFn: (data: { id: number; body: any }) => updateMatchStatus(data.id, data.body),
+    onSuccess: () => { 
+      qc.invalidateQueries({ queryKey: ["matches"] }); 
+      qc.invalidateQueries({ queryKey: ["dashboard-overview"] });
+      setCreateOpen(false); 
+      toast.success("Match updated"); 
+    },
+    onError: (err: any) => toast.error(err.message || "Failed to update match"),
   });
 
   const deleteMut = useMutation({
     mutationFn: deleteMatch,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["matches"] }); toast.success("Match deleted"); },
-    onError: () => toast.error("Failed to delete match"),
+    onSuccess: () => { 
+      qc.invalidateQueries({ queryKey: ["matches"] }); 
+      qc.invalidateQueries({ queryKey: ["dashboard-overview"] });
+      toast.success("Match deleted"); 
+    },
+    onError: (err: any) => toast.error(err.message || "Failed to delete match"),
   });
 
   const logMut = useMutation({
-    mutationFn: async (m: Match) => {
+    mutationFn: async (m: MatchExtended) => {
+      const sport = (m.sport_name || "").toLowerCase();
+      const isCricket = sport.includes("cricket");
+      const isFootball = sport.includes("football") || sport.includes("soccer");
+      const isTennisBad = sport.includes("tennis") || sport.includes("badminton");
+
       const s1 = Number(scores.team1_score);
       const s2 = Number(scores.team2_score);
+      const w1 = Number(scores.team1_wickets) || 0;
+      const w2 = Number(scores.team2_wickets) || 0;
+      const sets1 = Number(scores.team1_sets) || 0;
+      const sets2 = Number(scores.team2_sets) || 0;
+
       const winner = s1 > s2 ? m.team1_id : s2 > s1 ? m.team2_id : m.team1_id;
-      
-      let scoreObj1: { score: number; innings_1_score?: number; sets_won?: number } = { score: s1 };
-      let scoreObj2: { score: number; innings_1_score?: number; sets_won?: number } = { score: s2 };
-      
-      if (m.sport_name && (m.sport_name.toLowerCase().includes('badminton') || m.sport_name.toLowerCase().includes('tennis'))) {
-        scoreObj1 = { score: s1, sets_won: s1 };
-        scoreObj2 = { score: s2, sets_won: s2 };
-      } else if (m.sport_name && m.sport_name.toLowerCase().includes('cricket')) {
-        scoreObj1 = { score: s1, innings_1_score: s1 };
-        scoreObj2 = { score: s2, innings_1_score: s2 };
+
+      let scoreObj1: { score: number; innings_1_score?: number; wickets?: number; sets_won?: number } = { score: s1 };
+      let scoreObj2: { score: number; innings_1_score?: number; wickets?: number; sets_won?: number } = { score: s2 };
+      let summary = `${m.team1_name} ${s1} - ${s2} ${m.team2_name}`;
+
+      if (isCricket) {
+        scoreObj1 = { score: s1, innings_1_score: s1, wickets: w1 };
+        scoreObj2 = { score: s2, innings_1_score: s2, wickets: w2 };
+        summary = `${m.team1_name} ${s1}/${w1} - ${s2}/${w2} ${m.team2_name}`;
+      } else if (isTennisBad) {
+        scoreObj1 = { score: s1, sets_won: sets1 };
+        scoreObj2 = { score: s2, sets_won: sets2 };
+        summary = `${m.team1_name} ${sets1} sets (${s1} pts) - ${sets2} sets (${s2} pts) ${m.team2_name}`;
       }
 
-      await logMatchScore(m.match_id, m.team1_id, scoreObj1);
-      await logMatchScore(m.match_id, m.team2_id, scoreObj2);
+      if (m.match_id && m.team1_id && m.team2_id) {
+        await logMatchScore(m.match_id, m.team1_id, scoreObj1);
+        await logMatchScore(m.match_id, m.team2_id, scoreObj2);
 
-      return logMatchResult(m.match_id, {
-        team1_id: m.team1_id,
-        team1_score: s1,
-        team2_id: m.team2_id,
-        team2_score: s2,
-        winner_team_id: winner,
-        result_summary: `${m.team1_name} ${s1} - ${s2} ${m.team2_name}`,
-      });
+        return logMatchResult(m.match_id, {
+          team1_id: m.team1_id,
+          team1_score: s1,
+          team2_id: m.team2_id,
+          team2_score: s2,
+          winner_team_id: winner || m.team1_id,
+          result_summary: summary,
+        });
+      }
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["matches"] }); setResultOpen(false); toast.success("Result logged"); },
+    onSuccess: () => { 
+      qc.invalidateQueries({ queryKey: ["matches"] }); 
+      qc.invalidateQueries({ queryKey: ["dashboard-overview"] });
+      setResultOpen(false); 
+      toast.success("Result logged"); 
+    },
     onError: () => toast.error("Failed to log result"),
   });
 
@@ -121,6 +175,8 @@ export default function MatchesPage() {
     mutationFn: (data: { matchId: number, body: any }) => savePlayerMatchStats(data.matchId, data.body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["match", selectedMatch?.match_id] });
+      qc.invalidateQueries({ queryKey: ["top-players"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-overview"] });
       setStatsForm({ player_id: "" });
       toast.success("Player stats logged");
     },
@@ -130,6 +186,7 @@ export default function MatchesPage() {
   const handleSaveMatch = () => {
     const b = {
       event_id: form.event_id !== "standalone" ? Number(form.event_id) : undefined,
+      sport_id: form.event_id === "standalone" && form.sport_id ? Number(form.sport_id) : undefined,
       match_date: form.match_date,
       status: form.status,
       round_name: form.round_name,
@@ -145,15 +202,16 @@ export default function MatchesPage() {
   const openCreate = () => {
     setIsEdit(false);
     setSelectedMatch(null);
-    setForm({ event_id: "standalone", match_date: "", team1_id: "", team2_id: "", status: "scheduled", round_name: "" });
+    setForm({ event_id: "standalone", sport_id: "", match_date: "", team1_id: "", team2_id: "", status: "scheduled", round_name: "" });
     setCreateOpen(true);
   };
 
-  const openEdit = (m: Match) => {
+  const openEdit = (m: MatchExtended) => {
     setIsEdit(true);
     setSelectedMatch(m);
     setForm({
       event_id: m.event_id ? String(m.event_id) : "standalone",
+      sport_id: m.sport_id ? String(m.sport_id) : "",
       match_date: m.match_date ? new Date(m.match_date).toISOString().split('T')[0] : "",
       team1_id: m.team1_id ? String(m.team1_id) : "",
       team2_id: m.team2_id ? String(m.team2_id) : "",
@@ -169,13 +227,20 @@ export default function MatchesPage() {
     return "bg-sport-yellow/20 text-sport-yellow border-sport-yellow/30";
   };
 
-  const openResult = (m: Match) => {
+  const openResult = (m: MatchExtended) => {
     setSelectedMatch(m);
-    setScores({ team1_score: m.team1_score ?? "", team2_score: m.team2_score ?? "" });
+    setScores({
+      team1_score: String(m.team1_score ?? ""),
+      team2_score: String(m.team2_score ?? ""),
+      team1_wickets: String(m.team1_wickets ?? ""),
+      team2_wickets: String(m.team2_wickets ?? ""),
+      team1_sets: "",
+      team2_sets: "",
+    });
     setResultOpen(true);
   };
 
-  const openStats = (m: Match) => {
+  const openStats = (m: MatchExtended) => {
     setSelectedMatch(m);
     setSelectedTeamId(String(m.team1_id));
     setStatsForm({ player_id: "" });
@@ -218,7 +283,18 @@ export default function MatchesPage() {
                   </TableCell>
                   <TableCell><Badge variant="secondary">{m.sport_name}</Badge></TableCell>
                   <TableCell className="text-center font-mono text-foreground">
-                    {m.status === "completed" ? `${m.team1_score} - ${m.team2_score}` : "—"}
+                    {m.status === "completed" ? (() => {
+                      const sport = (m.sport_name || "").toLowerCase();
+                      const t1 = m.teams?.[0];
+                      const t2 = m.teams?.[1];
+                      if (sport.includes("cricket")) {
+                        return `${t1?.score ?? m.team1_score}/${t1?.wickets ?? 0} - ${t2?.score ?? m.team2_score}/${t2?.wickets ?? 0}`;
+                      }
+                      if (sport.includes("tennis") || sport.includes("badminton")) {
+                        return `${t1?.sets_won ?? m.team1_score} - ${t2?.sets_won ?? m.team2_score} sets`;
+                      }
+                      return `${m.team1_score} - ${m.team2_score}`;
+                    })() : "—"}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {new Date(m.match_date).toLocaleDateString()}
@@ -264,22 +340,98 @@ export default function MatchesPage() {
             <DialogTitle className="text-foreground">Log Match Result</DialogTitle>
             <DialogDescription>
               {selectedMatch ? `${selectedMatch.team1_name} vs ${selectedMatch.team2_name}` : ""}
+              {selectedMatch?.sport_name && <Badge variant="secondary" className="ml-2">{selectedMatch.sport_name}</Badge>}
             </DialogDescription>
           </DialogHeader>
-          {selectedMatch && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>{selectedMatch.team1_name} {getScoreLabel(selectedMatch.sport_name)}</Label>
-                  <Input type="number" min={0} value={scores.team1_score} onChange={(e) => setScores({ ...scores, team1_score: e.target.value })} className="bg-secondary border-border" />
-                </div>
-                <div className="space-y-2">
-                  <Label>{selectedMatch.team2_name} {getScoreLabel(selectedMatch.sport_name)}</Label>
-                  <Input type="number" min={0} value={scores.team2_score} onChange={(e) => setScores({ ...scores, team2_score: e.target.value })} className="bg-secondary border-border" />
-                </div>
+          {selectedMatch && (() => {
+            const sport = (selectedMatch.sport_name || "").toLowerCase();
+            const isCricket = sport.includes("cricket");
+            const isFootball = sport.includes("football") || sport.includes("soccer");
+            const isTennisBad = sport.includes("tennis") || sport.includes("badminton");
+            return (
+              <div className="grid gap-4 py-4">
+                {/* --- Cricket: Runs + Wickets --- */}
+                {isCricket && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>{selectedMatch.team1_name} Runs</Label>
+                        <Input type="number" min={0} value={scores.team1_score} onChange={(e) => setScores({ ...scores, team1_score: e.target.value })} className="bg-secondary border-border" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>{selectedMatch.team2_name} Runs</Label>
+                        <Input type="number" min={0} value={scores.team2_score} onChange={(e) => setScores({ ...scores, team2_score: e.target.value })} className="bg-secondary border-border" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>{selectedMatch.team1_name} Wickets</Label>
+                        <Input type="number" min={0} max={10} value={scores.team1_wickets} onChange={(e) => setScores({ ...scores, team1_wickets: e.target.value })} className="bg-secondary border-border" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>{selectedMatch.team2_name} Wickets</Label>
+                        <Input type="number" min={0} max={10} value={scores.team2_wickets} onChange={(e) => setScores({ ...scores, team2_wickets: e.target.value })} className="bg-secondary border-border" />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* --- Football: Goals --- */}
+                {isFootball && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>{selectedMatch.team1_name} Goals</Label>
+                      <Input type="number" min={0} value={scores.team1_score} onChange={(e) => setScores({ ...scores, team1_score: e.target.value })} className="bg-secondary border-border" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{selectedMatch.team2_name} Goals</Label>
+                      <Input type="number" min={0} value={scores.team2_score} onChange={(e) => setScores({ ...scores, team2_score: e.target.value })} className="bg-secondary border-border" />
+                    </div>
+                  </div>
+                )}
+
+                {/* --- Tennis / Badminton: Points + Sets --- */}
+                {isTennisBad && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>{selectedMatch.team1_name} Points</Label>
+                        <Input type="number" min={0} value={scores.team1_score} onChange={(e) => setScores({ ...scores, team1_score: e.target.value })} className="bg-secondary border-border" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>{selectedMatch.team2_name} Points</Label>
+                        <Input type="number" min={0} value={scores.team2_score} onChange={(e) => setScores({ ...scores, team2_score: e.target.value })} className="bg-secondary border-border" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>{selectedMatch.team1_name} Sets Won</Label>
+                        <Input type="number" min={0} value={scores.team1_sets} onChange={(e) => setScores({ ...scores, team1_sets: e.target.value })} className="bg-secondary border-border" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>{selectedMatch.team2_name} Sets Won</Label>
+                        <Input type="number" min={0} value={scores.team2_sets} onChange={(e) => setScores({ ...scores, team2_sets: e.target.value })} className="bg-secondary border-border" />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* --- Fallback: Generic Score --- */}
+                {!isCricket && !isFootball && !isTennisBad && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>{selectedMatch.team1_name} Score</Label>
+                      <Input type="number" min={0} value={scores.team1_score} onChange={(e) => setScores({ ...scores, team1_score: e.target.value })} className="bg-secondary border-border" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{selectedMatch.team2_name} Score</Label>
+                      <Input type="number" min={0} value={scores.team2_score} onChange={(e) => setScores({ ...scores, team2_score: e.target.value })} className="bg-secondary border-border" />
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
           <DialogFooter>
             <Button variant="outline" onClick={() => setResultOpen(false)}>Cancel</Button>
             <Button onClick={() => selectedMatch && logMut.mutate(selectedMatch)} disabled={logMut.isPending || scores.team1_score === "" || scores.team2_score === ""}>
@@ -436,19 +588,37 @@ export default function MatchesPage() {
             <DialogDescription>Select teams and provide match details.</DialogDescription>
           </DialogHeader>
            <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label>Event / Tournament</Label>
-              <Select value={form.event_id} onValueChange={(v) => setForm({ ...form, event_id: v })}>
-                <SelectTrigger className="bg-secondary border-border">
-                  <SelectValue placeholder="Standalone Match" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="standalone">Standalone Match</SelectItem>
-                  {events?.map((e) => (
-                    <SelectItem key={e.event_id} value={String(e.event_id)}>{e.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Event / Tournament</Label>
+                <Select value={form.event_id} onValueChange={(v) => setForm({ ...form, event_id: v, team1_id: "", team2_id: "" })}>
+                  <SelectTrigger className="bg-secondary border-border">
+                    <SelectValue placeholder="Standalone Match" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="standalone">Standalone Match</SelectItem>
+                    {events?.map((e) => (
+                      <SelectItem key={e.event_id} value={String(e.event_id)}>{e.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {form.event_id === "standalone" && (
+                <div className="space-y-2">
+                  <Label>Sport</Label>
+                  <Select value={form.sport_id} onValueChange={(v) => setForm({ ...form, sport_id: v, team1_id: "", team2_id: "" })}>
+                    <SelectTrigger className="bg-secondary border-border">
+                      <SelectValue placeholder="Select sport" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sports?.map((s) => (
+                        <SelectItem key={s.sport_id} value={String(s.sport_id)}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
             
             <div className="grid grid-cols-2 gap-4">
@@ -459,7 +629,9 @@ export default function MatchesPage() {
                     <SelectValue placeholder="Select team" />
                   </SelectTrigger>
                   <SelectContent>
-                    {teams?.filter(t => String(t.team_id) !== form.team2_id).map((t) => (
+                    {teams?.filter(t => String(t.team_id) !== form.team2_id)
+                      .filter(t => form.event_id !== "standalone" ? eventData?.teams?.some(et => et.team_id === t.team_id) : (form.sport_id ? t.sport_id === Number(form.sport_id) : true))
+                      .map((t) => (
                       <SelectItem key={t.team_id} value={String(t.team_id)}>{t.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -472,7 +644,9 @@ export default function MatchesPage() {
                     <SelectValue placeholder="Select team" />
                   </SelectTrigger>
                   <SelectContent>
-                    {teams?.filter(t => String(t.team_id) !== form.team1_id).map((t) => (
+                    {teams?.filter(t => String(t.team_id) !== form.team1_id)
+                      .filter(t => form.event_id !== "standalone" ? eventData?.teams?.some(et => et.team_id === t.team_id) : (form.sport_id ? t.sport_id === Number(form.sport_id) : true))
+                      .map((t) => (
                       <SelectItem key={t.team_id} value={String(t.team_id)}>{t.name}</SelectItem>
                     ))}
                   </SelectContent>

@@ -9,6 +9,7 @@ import {
   getPlayerStats,
   getPlayers,
   getTeams,
+  getSports,
   updatePlayer,
 } from "@/lib/api";
 import { AppLayout } from "@/components/AppLayout";
@@ -40,6 +41,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 
 type MembershipForm = {
@@ -58,6 +61,7 @@ type PlayerForm = {
   date_of_birth: string;
   gender: string;
   player_image_url: string;
+  sport_ids: number[];
   memberships: MembershipForm[];
 };
 
@@ -77,6 +81,7 @@ const emptyForm = (): PlayerForm => ({
   date_of_birth: "",
   gender: "",
   player_image_url: "",
+  sport_ids: [],
   memberships: [emptyMembership()],
 });
 
@@ -92,6 +97,7 @@ export default function PlayersPage() {
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
 
   const { data: players, isLoading } = useQuery({ queryKey: ["players"], queryFn: getPlayers });
+  const { data: sports } = useQuery({ queryKey: ["sports"], queryFn: getSports });
   const { data: teams } = useQuery({ queryKey: ["teams"], queryFn: getTeams });
   const { data: playerStats, isLoading: loadingStats } = useQuery({
     queryKey: ["player-stats", selectedPlayerId],
@@ -212,6 +218,7 @@ export default function PlayersPage() {
     date_of_birth: form.date_of_birth || undefined,
     gender: form.gender || undefined,
     player_image_url: form.player_image_url || undefined,
+    sport_ids: form.sport_ids,
     memberships: form.memberships
       .filter((membership) => membership.team_id)
       .map((membership) => ({
@@ -261,6 +268,7 @@ export default function PlayersPage() {
       player_image_url: player.player_image_url || "",
       date_of_birth: player.date_of_birth ? new Date(player.date_of_birth).toISOString().split("T")[0] : "",
       gender: player.gender || "",
+      sport_ids: player.sport_ids || [],
       memberships: activeMemberships.length > 0 ? activeMemberships : [emptyMembership()],
     });
     setCreateOpen(true);
@@ -415,6 +423,34 @@ export default function PlayersPage() {
               </div>
             </div>
 
+            <div className="space-y-3 rounded-lg border border-border/60 p-4">
+              <div className="flex flex-col gap-1">
+                <Label className="text-sm font-semibold text-foreground">Sports Participated</Label>
+                <p className="text-xs text-muted-foreground">Select all sports this player is active in. Stats and team eligibility will be based on these selections.</p>
+              </div>
+              <div className="flex flex-wrap gap-4 pt-2">
+                {sports?.map((sport) => (
+                  <div key={sport.sport_id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`sport-${sport.sport_id}`}
+                      checked={form.sport_ids.includes(sport.sport_id)}
+                      onCheckedChange={(checked) => {
+                        setForm((current) => ({
+                          ...current,
+                          sport_ids: checked
+                            ? [...current.sport_ids, sport.sport_id]
+                            : current.sport_ids.filter((id) => id !== sport.sport_id),
+                        }));
+                      }}
+                    />
+                    <Label htmlFor={`sport-${sport.sport_id}`} className="text-sm cursor-pointer whitespace-nowrap">
+                      {sport.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="space-y-4 rounded-lg border border-border/60 p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -442,9 +478,14 @@ export default function PlayersPage() {
                           <SelectValue placeholder="Select team" />
                         </SelectTrigger>
                         <SelectContent>
-                          {teams?.map((team) => (
-                            <SelectItem key={team.team_id} value={String(team.team_id)}>{team.name}</SelectItem>
-                          ))}
+                          {teams
+                            ?.filter((t) => form.sport_ids.includes(t.sport_id))
+                            .map((team) => (
+                              <SelectItem key={team.team_id} value={String(team.team_id)}>{team.name}</SelectItem>
+                            ))}
+                          {form.sport_ids.length === 0 && (
+                            <div className="p-2 text-xs text-muted-foreground text-center">Please select sports above first</div>
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
@@ -507,24 +548,105 @@ export default function PlayersPage() {
             <DialogTitle className="text-foreground">Stats - {selectedPlayerName}</DialogTitle>
             <DialogDescription>Performance statistics across matches.</DialogDescription>
           </DialogHeader>
-          <div className="py-4">
+          <div className="py-2">
             {loadingStats ? (
-              <p className="py-4 text-center text-muted-foreground">Loading stats...</p>
-            ) : playerStats ? (
-              <div className="space-y-3">
-                <div className="rounded-lg bg-secondary p-4">
-                  {Object.entries(playerStats)
-                    .filter(([key]) => key !== "player_id")
-                    .map(([key, value]) => (
-                      <div key={key} className="flex items-center justify-between py-1">
-                        <span className="text-sm text-muted-foreground">{formatStatKey(key)}</span>
-                        <span className="text-sm font-medium text-foreground">{String(value ?? "-")}</span>
+              <p className="py-8 text-center text-muted-foreground">Loading stats...</p>
+            ) : Array.isArray(playerStats) && playerStats.length > 0 ? (
+              <Tabs defaultValue={String(playerStats[0].sport_id)} className="w-full">
+                <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 bg-secondary/50">
+                  {playerStats.map((stat) => (
+                    <TabsTrigger key={stat.sport_id} value={String(stat.sport_id)}>
+                      {stat.sport_name}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                {playerStats.map((stat) => (
+                  <TabsContent key={stat.sport_id} value={String(stat.sport_id)} className="pt-4">
+                    <div className="rounded-lg bg-secondary/30 p-4 border border-border/40">
+                      <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+                        <div className="flex items-center justify-between py-1 border-b border-border/20 col-span-2 mb-2">
+                          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Standard Metrics</span>
+                        </div>
+                        <div className="flex items-center justify-between py-1">
+                          <span className="text-sm text-muted-foreground">Matches Played</span>
+                          <span className="text-sm font-medium text-foreground">{stat.matches_played}</span>
+                        </div>
+                        <div className="flex items-center justify-between py-1">
+                          <span className="text-sm text-muted-foreground">Avg Rating</span>
+                          <span className="text-sm font-medium text-foreground">{stat.avg_rating || "-"}</span>
+                        </div>
+
+                        {/* Sport Specific Metrics */}
+                        {stat.sport_name === "Cricket" && (
+                          <>
+                            <div className="flex items-center justify-between py-1 border-b border-border/20 col-span-2 mb-2 mt-2">
+                              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Cricket Stats</span>
+                            </div>
+                            <div className="flex items-center justify-between py-1">
+                              <span className="text-sm text-muted-foreground">Total Runs</span>
+                              <span className="text-sm font-medium text-foreground">{stat.total_runs}</span>
+                            </div>
+                            <div className="flex items-center justify-between py-1">
+                              <span className="text-sm text-muted-foreground">Balls Faced</span>
+                              <span className="text-sm font-medium text-foreground">{stat.total_balls}</span>
+                            </div>
+                            <div className="flex items-center justify-between py-1">
+                              <span className="text-sm text-muted-foreground">Wickets Taken</span>
+                              <span className="text-sm font-medium text-foreground">{stat.total_wickets}</span>
+                            </div>
+                          </>
+                        )}
+
+                        {stat.sport_name === "Football" && (
+                          <>
+                            <div className="flex items-center justify-between py-1 border-b border-border/20 col-span-2 mb-2 mt-2">
+                              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Football Stats</span>
+                            </div>
+                            <div className="flex items-center justify-between py-1">
+                              <span className="text-sm text-muted-foreground">Goals</span>
+                              <span className="text-sm font-medium text-foreground">{stat.total_goals}</span>
+                            </div>
+                            <div className="flex items-center justify-between py-1">
+                              <span className="text-sm text-muted-foreground">Assists</span>
+                              <span className="text-sm font-medium text-foreground">{stat.total_assists}</span>
+                            </div>
+                            <div className="flex items-center justify-between py-1">
+                              <span className="text-sm text-muted-foreground">Yellow Cards</span>
+                              <span className="text-sm font-medium text-foreground">{stat.total_yellows}</span>
+                            </div>
+                            <div className="flex items-center justify-between py-1">
+                              <span className="text-sm text-muted-foreground">Red Cards</span>
+                              <span className="text-sm font-medium text-foreground">{stat.total_reds}</span>
+                            </div>
+                          </>
+                        )}
+
+                        {(stat.sport_name === "Tennis" || stat.sport_name === "Badminton") && (
+                          <>
+                            <div className="flex items-center justify-between py-1 border-b border-border/20 col-span-2 mb-2 mt-2">
+                              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Racket Stats</span>
+                            </div>
+                            <div className="flex items-center justify-between py-1">
+                              <span className="text-sm text-muted-foreground">Points Won</span>
+                              <span className="text-sm font-medium text-foreground">{stat.total_points}</span>
+                            </div>
+                            <div className="flex items-center justify-between py-1">
+                              <span className="text-sm text-muted-foreground">Sets Won</span>
+                              <span className="text-sm font-medium text-foreground">{stat.total_sets}</span>
+                            </div>
+                            <div className="flex items-center justify-between py-1">
+                              <span className="text-sm text-muted-foreground">Games Won</span>
+                              <span className="text-sm font-medium text-foreground">{stat.total_games}</span>
+                            </div>
+                          </>
+                        )}
                       </div>
-                    ))}
-                </div>
-              </div>
+                    </div>
+                  </TabsContent>
+                ))}
+              </Tabs>
             ) : (
-              <p className="py-4 text-center text-muted-foreground">No stats available</p>
+              <p className="py-8 text-center text-muted-foreground">No stats available for this player.</p>
             )}
           </div>
         </DialogContent>

@@ -607,3 +607,38 @@ INSERT INTO match_rosters (match_id, player_id, team_id, lineup_position, is_sta
 (7, (SELECT player_id FROM players WHERE email = 'mitchell.starc@seed.msms.local'), 12, 3, 1),
 (7, (SELECT player_id FROM players WHERE email = 'glenn.maxwell@seed.msms.local'), 12, 4, 1),
 (7, (SELECT player_id FROM players WHERE email = 'marcus.stoinis@seed.msms.local'), 12, 5, 1);
+
+-- ============================================================
+-- PLAYER_SPORTS JUNCTION
+-- ============================================================
+-- Associating players with their registered sports.
+-- Many-to-many relationship allows players to play multiple sports.
+
+-- CRICKET PLAYERS (Sport ID 1)
+INSERT INTO player_sports (player_id, sport_id)
+SELECT player_id, 1 FROM players WHERE team_id BETWEEN 1 AND 15;
+
+-- FOOTBALL PLAYERS (Sport ID 2)
+INSERT INTO player_sports (player_id, sport_id)
+SELECT player_id, 2 FROM players WHERE team_id BETWEEN 16 AND 30;
+
+-- TENNIS PLAYERS (Sport ID 3)
+INSERT INTO player_sports (player_id, sport_id)
+SELECT player_id, 3 FROM players WHERE team_id BETWEEN 31 AND 35;
+
+-- BADMINTON PLAYERS (Sport ID 4)
+INSERT INTO player_sports (player_id, sport_id)
+SELECT player_id, 4 FROM players WHERE team_id BETWEEN 36 AND 40;
+
+-- MULTI-SPORT ENTRIES (For Demonstration)
+-- Virat Kohli also plays Football
+INSERT INTO player_sports (player_id, sport_id)
+VALUES ((SELECT player_id FROM players WHERE email = 'virat.kohli@seed.msms.local'), 2);
+
+-- Trent Alexander-Arnold also plays Cricket
+INSERT INTO player_sports (player_id, sport_id)
+VALUES ((SELECT player_id FROM players WHERE email = 'trent.alexander-arnold@seed.msms.local'), 1);
+
+-- Harry Kane also plays Cricket
+INSERT INTO player_sports (player_id, sport_id)
+VALUES ((SELECT player_id FROM players WHERE email = 'harry.kane@seed.msms.local'), 1);

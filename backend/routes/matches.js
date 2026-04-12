@@ -21,11 +21,11 @@ router.get('/', (req, res) => {
                 m.match_id, m.match_date, m.status, m.round_name, m.result_summary,
                 m.created_at, m.venue_id,
                 e.event_id, e.name AS event_name,
-                s.sport_id, s.name AS sport_name,
+                COALESCE(e.sport_id, m.sport_id) AS sport_id, s.name AS sport_name,
                 v.name AS venue_name, v.location AS venue_location
             FROM matches m
             LEFT JOIN events e ON m.event_id = e.event_id
-            LEFT JOIN sports s ON e.sport_id = s.sport_id
+            LEFT JOIN sports s ON COALESCE(e.sport_id, m.sport_id) = s.sport_id
             LEFT JOIN venues v ON m.venue_id = v.venue_id
         `;
 
@@ -58,7 +58,7 @@ router.get('/', (req, res) => {
             const placeholders = matchIds.map(() => '?').join(', ');
             const teams = db.prepare(`
                 SELECT mt.match_id, mt.team_id, t.name AS team_name, mt.score, mt.is_winner,
-                       mt.innings_1_score, mt.innings_2_score, mt.sets_won
+                       mt.innings_1_score, mt.innings_2_score, mt.wickets, mt.sets_won
                 FROM match_teams mt
                 JOIN teams t ON mt.team_id = t.team_id
                 WHERE mt.match_id IN (${placeholders})
@@ -93,11 +93,11 @@ router.get('/:id', (req, res) => {
                 m.match_id, m.match_date, m.status, m.round_name, m.result_summary,
                 m.created_at,
                 e.event_id, e.name AS event_name,
-                s.sport_id, s.name AS sport_name,
+                COALESCE(e.sport_id, m.sport_id) AS sport_id, s.name AS sport_name,
                 v.venue_id, v.name AS venue_name, v.location AS venue_location
             FROM matches m
             LEFT JOIN events e ON m.event_id = e.event_id
-            LEFT JOIN sports s ON e.sport_id = s.sport_id
+            LEFT JOIN sports s ON COALESCE(e.sport_id, m.sport_id) = s.sport_id
             LEFT JOIN venues v ON m.venue_id = v.venue_id
             WHERE m.match_id = ?
         `).get(req.params.id);
@@ -107,7 +107,7 @@ router.get('/:id', (req, res) => {
         // Teams in this match
         match.teams = db.prepare(`
             SELECT mt.team_id, t.name AS team_name, mt.score, mt.is_winner,
-                   mt.innings_1_score, mt.innings_2_score, mt.sets_won
+                   mt.innings_1_score, mt.innings_2_score, mt.wickets, mt.sets_won
             FROM match_teams mt
             JOIN teams t ON mt.team_id = t.team_id
             WHERE mt.match_id = ?
@@ -156,7 +156,7 @@ router.get('/:id', (req, res) => {
 router.post('/', (req, res) => {
     try {
         const db = req.app.locals.db;
-        const { event_id, venue_id, match_date, round_name, team_ids } = req.body;
+        const { event_id, sport_id, venue_id, match_date, round_name, team_ids } = req.body;
 
         if (!match_date || !team_ids || team_ids.length < 2) {
             return res.status(400).json({ error: 'match_date and at least 2 team_ids are required' });
@@ -169,28 +169,34 @@ router.post('/', (req, res) => {
 
         // Use a TRANSACTION to insert match + match_teams + schedule atomically
         const insertMatch = db.transaction(() => {
-            // INSERT into matches
-            const result = db.prepare(`
-                INSERT INTO matches (event_id, venue_id, match_date, round_name)
-                VALUES (?, ?, ?, ?)
-            `).run(event_id || null, venue_id || null, match_date, round_name || null);
+            try {
+                // INSERT into matches
+                const result = db.prepare(`
+                    INSERT INTO matches (event_id, sport_id, venue_id, match_date, round_name)
+                    VALUES (?, ?, ?, ?, ?)
+                `).run(event_id || null, sport_id || null, venue_id || null, match_date, round_name || null);
 
-            const matchId = result.lastInsertRowid;
+                const matchId = result.lastInsertRowid;
+                console.error("DEBUG matchId =>", matchId, "result =>", result);
 
-            // INSERT into match_teams for each team
-            const insertTeam = db.prepare(`
-                INSERT INTO match_teams (match_id, team_id) VALUES (?, ?)
-            `);
-            for (const tid of uniqueTeamIds) {
-                insertTeam.run(matchId, tid);
+                // INSERT into match_teams for each team
+                const insertTeam = db.prepare(`
+                    INSERT INTO match_teams (match_id, team_id) VALUES (?, ?)
+                `);
+                for (const tid of uniqueTeamIds) {
+                    insertTeam.run(matchId, tid);
+                }
+
+                // INSERT into schedules
+                db.prepare(`
+                    INSERT INTO schedules (match_id, scheduled_time) VALUES (?, ?)
+                `).run(matchId, match_date);
+
+                return matchId;
+            } catch (innerErr) {
+                console.error("ROOT CAUSE SQL ERROR IN TRANSACTION:", innerErr);
+                throw innerErr;
             }
-
-            // INSERT into schedules
-            db.prepare(`
-                INSERT INTO schedules (match_id, scheduled_time) VALUES (?, ?)
-            `).run(matchId, match_date);
-
-            return matchId;
         });
 
         const matchId = insertMatch();
@@ -206,7 +212,7 @@ router.post('/', (req, res) => {
 router.put('/:id', (req, res) => {
     try {
         const db = req.app.locals.db;
-        const { match_date, venue_id, status, round_name, team_ids } = req.body;
+        const { match_date, venue_id, status, round_name, team_ids, sport_id } = req.body;
 
         const existing = db.prepare('SELECT * FROM matches WHERE match_id = ?').get(req.params.id);
         if (!existing) return res.status(404).json({ error: 'Match not found' });
@@ -214,13 +220,14 @@ router.put('/:id', (req, res) => {
         const updateTx = db.transaction(() => {
             db.prepare(`
                 UPDATE matches 
-                SET match_date = ?, venue_id = ?, status = ?, round_name = ?
+                SET match_date = ?, venue_id = ?, status = ?, round_name = ?, sport_id = ?
                 WHERE match_id = ?
             `).run(
                 match_date || existing.match_date,
                 venue_id !== undefined ? venue_id : existing.venue_id,
                 status || existing.status,
                 round_name !== undefined ? round_name : existing.round_name,
+                sport_id !== undefined ? sport_id : existing.sport_id,
                 req.params.id
             );
 
@@ -267,7 +274,7 @@ router.delete('/:id', (req, res) => {
 router.put('/:id/score', (req, res) => {
     try {
         const db = req.app.locals.db;
-        const { team_id, score, innings_1_score, innings_2_score, sets_won } = req.body;
+        const { team_id, score, innings_1_score, innings_2_score, wickets, sets_won } = req.body;
 
         if (!team_id || score === undefined) {
             return res.status(400).json({ error: 'team_id and score are required' });
@@ -275,12 +282,13 @@ router.put('/:id/score', (req, res) => {
 
         db.prepare(`
             UPDATE match_teams 
-            SET score = ?, innings_1_score = ?, innings_2_score = ?, sets_won = ?
+            SET score = ?, innings_1_score = ?, innings_2_score = ?, wickets = ?, sets_won = ?
             WHERE match_id = ? AND team_id = ?
         `).run(
             score,
             innings_1_score !== undefined ? innings_1_score : null,
             innings_2_score !== undefined ? innings_2_score : null,
+            wickets !== undefined ? wickets : null,
             sets_won !== undefined ? sets_won : null,
             req.params.id, team_id
         );
@@ -467,13 +475,34 @@ router.get('/:id/events', (req, res) => {
 router.post('/:id/stats', (req, res) => {
     try {
         const db = req.app.locals.db;
-        const {
+        let {
             player_id, runs_scored, balls_faced, wickets_taken, runs_conceded,
             overs_bowled, goals_scored, assists, yellow_cards, red_cards,
             minutes_played, points_won, sets_won, games_won, rating, notes
         } = req.body;
 
         if (!player_id) return res.status(400).json({ error: 'player_id is required' });
+
+        if (!rating && rating !== 0) {
+            const matchInfo = db.prepare(`
+                SELECT s.name as sport_name 
+                FROM matches m
+                LEFT JOIN events e ON m.event_id = e.event_id
+                LEFT JOIN sports s ON e.sport_id = s.sport_id
+                WHERE m.match_id = ?
+            `).get(req.params.id);
+            const sportName = (matchInfo?.sport_name || '').toLowerCase();
+            
+            let calculatedRating = 6.0; // base rating
+            if (sportName.includes('cricket')) {
+               calculatedRating = 5.0 + ((Number(runs_scored) || 0) / 10) + ((Number(wickets_taken) || 0) * 1.5) - ((Number(runs_conceded) || 0) / 20);
+            } else if (sportName.includes('football') || sportName.includes('soccer')) {
+               calculatedRating = 6.0 + ((Number(goals_scored) || 0) * 1.5) + ((Number(assists) || 0) * 1) - ((Number(yellow_cards) || 0) * 0.5) - ((Number(red_cards) || 0) * 2);
+            } else if (sportName.includes('tennis') || sportName.includes('badminton')) {
+               calculatedRating = 5.0 + ((Number(sets_won) || 0) * 1.5) + ((Number(points_won) || 0) * 0.1);
+            }
+            rating = Math.min(10, Math.max(1, calculatedRating)).toFixed(1);
+        }
 
         db.prepare(`
             INSERT INTO player_match_stats 

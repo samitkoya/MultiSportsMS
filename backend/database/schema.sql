@@ -130,6 +130,18 @@ CREATE TABLE IF NOT EXISTS player_team_memberships (
 );
 
 -- ============================================================
+-- TABLE 5C: player_sports (Junction — M:N between players and sports)
+-- Allows a player to play multiple sports.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS player_sports (
+    player_id INTEGER NOT NULL,
+    sport_id  INTEGER NOT NULL,
+    PRIMARY KEY (player_id, sport_id),
+    FOREIGN KEY (player_id) REFERENCES players(player_id) ON DELETE CASCADE,
+    FOREIGN KEY (sport_id)  REFERENCES sports(sport_id)  ON DELETE CASCADE
+);
+
+-- ============================================================
 -- TABLE 6: events (Tournaments / Leagues)
 -- Each event is linked to one sport.
 -- ============================================================
@@ -171,6 +183,7 @@ CREATE TABLE IF NOT EXISTS event_teams (
 CREATE TABLE IF NOT EXISTS matches (
     match_id       INTEGER PRIMARY KEY AUTOINCREMENT,
     event_id       INTEGER,
+    sport_id       INTEGER,
     venue_id       INTEGER,
     match_date     DATETIME NOT NULL,
     status         TEXT    DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'ongoing', 'completed', 'cancelled', 'postponed')),
@@ -179,6 +192,7 @@ CREATE TABLE IF NOT EXISTS matches (
     created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
 
     FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE,
+    FOREIGN KEY (sport_id) REFERENCES sports(sport_id) ON DELETE CASCADE,
     FOREIGN KEY (venue_id) REFERENCES venues(venue_id) ON DELETE SET NULL
 );
 
@@ -194,6 +208,7 @@ CREATE TABLE IF NOT EXISTS match_teams (
     is_winner       BOOLEAN DEFAULT 0,
     innings_1_score INTEGER,                                        -- cricket only
     innings_2_score INTEGER,                                        -- cricket only
+    wickets         INTEGER DEFAULT 0,                              -- cricket only (wickets lost)
     sets_won        INTEGER,                                        -- tennis/badminton only
 
     PRIMARY KEY (match_id, team_id),
@@ -439,13 +454,13 @@ SELECT
     e.name         AS event_name,
     e.event_id,
     s.name         AS sport_name,
-    s.sport_id,
+    COALESCE(e.sport_id, m.sport_id) AS sport_id,
     v.name         AS venue_name,
     v.location     AS venue_location,
     GROUP_CONCAT(t.name, ' vs ')  AS team_names
 FROM matches m
-JOIN events e       ON m.event_id = e.event_id
-JOIN sports s       ON e.sport_id = s.sport_id
+LEFT JOIN events e  ON m.event_id = e.event_id
+LEFT JOIN sports s  ON COALESCE(e.sport_id, m.sport_id) = s.sport_id
 LEFT JOIN venues v  ON m.venue_id = v.venue_id
 LEFT JOIN match_teams mt ON m.match_id = mt.match_id
 LEFT JOIN teams t        ON mt.team_id = t.team_id

@@ -16,7 +16,32 @@ function isMembershipValidationError(message) {
         'Each membership',
         'Team ',
         'Duplicate active memberships',
+        'registered for the sport',
     ].some((fragment) => message.includes(fragment));
+}
+
+function loadSports(db, playerIds) {
+    if (!playerIds.length) return new Map();
+
+    const placeholders = playerIds.map(() => '?').join(', ');
+    const rows = db.prepare(`
+        SELECT ps.player_id, ps.sport_id, s.name AS sport_name
+        FROM player_sports ps
+        JOIN sports s ON ps.sport_id = s.sport_id
+        WHERE ps.player_id IN (${placeholders})
+    `).all(...playerIds);
+
+    const sportsByPlayer = new Map();
+    for (const row of rows) {
+        if (!sportsByPlayer.has(row.player_id)) {
+            sportsByPlayer.set(row.player_id, []);
+        }
+        sportsByPlayer.get(row.player_id).push({
+            sport_id: row.sport_id,
+            sport_name: row.sport_name,
+        });
+    }
+    return sportsByPlayer;
 }
 
 function loadMemberships(db, playerIds) {
@@ -99,9 +124,16 @@ function normalizeMemberships(rawMemberships, fallbackMembership) {
         });
 }
 
-function validateMemberships(db, memberships, playerId = null) {
+function validateMemberships(db, memberships, playerId = null, allowedSportIds = null) {
     const teamsById = new Map();
-    let sportId = null;
+    const validatedSportIds = new Set();
+
+    // If playerId is provided but allowedSportIds is not, load from DB
+    let effectiveSportIds = allowedSportIds;
+    if (playerId && !effectiveSportIds) {
+        const sports = db.prepare('SELECT sport_id FROM player_sports WHERE player_id = ?').all(playerId);
+        effectiveSportIds = sports.map(s => s.sport_id);
+    }
 
     for (const membership of memberships) {
         if (!membership.team_id || Number.isNaN(membership.team_id)) {
@@ -119,11 +151,11 @@ function validateMemberships(db, memberships, playerId = null) {
             throw new Error(`Team ${membership.team_id} not found`);
         }
 
-        if (sportId !== null && sportId !== team.sport_id) {
-            throw new Error('A player cannot hold active memberships across different sports');
+        if (effectiveSportIds && !effectiveSportIds.includes(team.sport_id)) {
+            throw new Error(`Player is not registered for the sport (${team.sport_name}) of team "${team.name}"`);
         }
 
-        sportId = team.sport_id;
+        validatedSportIds.add(team.sport_id);
 
         const uniqueKey = `${membership.team_id}:${membership.membership_type}`;
         if (teamsById.has(uniqueKey)) {
@@ -132,19 +164,15 @@ function validateMemberships(db, memberships, playerId = null) {
 
         teamsById.set(uniqueKey, true);
     }
+}
 
-    if (!memberships.length || !playerId) return;
+function syncPlayerSports(db, playerId, sportIds) {
+    if (!Array.isArray(sportIds)) return;
 
-    const currentSports = db.prepare(`
-        SELECT DISTINCT t.sport_id
-        FROM player_team_memberships ptm
-        JOIN teams t ON ptm.team_id = t.team_id
-        WHERE ptm.player_id = ? AND ptm.is_active = 1
-    `).all(playerId);
-
-    const activeSportId = currentSports[0]?.sport_id ?? null;
-    if (activeSportId !== null && sportId !== null && activeSportId !== sportId) {
-        throw new Error('A player cannot move between sports using memberships');
+    db.prepare('DELETE FROM player_sports WHERE player_id = ?').run(playerId);
+    const insert = db.prepare('INSERT INTO player_sports (player_id, sport_id) VALUES (?, ?)');
+    for (const sportId of sportIds) {
+        insert.run(playerId, sportId);
     }
 }
 
@@ -177,17 +205,22 @@ function replaceMemberships(db, playerId, memberships) {
     syncPlayerPrimaryMembership(db, playerId);
 }
 
-function attachMemberships(db, players) {
-    const membershipsByPlayer = loadMemberships(db, players.map((player) => player.player_id));
+function attachMembershipsAndSports(db, players) {
+    const playerIds = players.map((player) => player.player_id);
+    const membershipsByPlayer = loadMemberships(db, playerIds);
+    const sportsByPlayer = loadSports(db, playerIds);
 
     return players.map((player) => {
         const memberships = membershipsByPlayer.get(player.player_id) || [];
+        const sports = sportsByPlayer.get(player.player_id) || [];
         const activeMemberships = memberships.filter((membership) => membership.is_active);
         const teamNames = [...new Set(activeMemberships.map((membership) => membership.team_name))];
 
         return {
             ...player,
             memberships,
+            sports,
+            sport_ids: sports.map(s => s.sport_id),
             membership_count: activeMemberships.length,
             team_names: teamNames.join(', '),
         };
@@ -272,7 +305,7 @@ router.get('/', (req, res) => {
         sql += ' ORDER BY p.last_name, p.first_name';
 
         const players = db.prepare(sql).all(...params);
-        res.json(attachMemberships(db, players));
+        res.json(attachMembershipsAndSports(db, players));
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -298,28 +331,7 @@ router.get('/:id', (req, res) => {
 
         if (!player) return res.status(404).json({ error: 'Player not found' });
 
-        const memberships = loadMemberships(db, [player.player_id]).get(player.player_id) || [];
-
-        const matchHistory = db.prepare(`
-            SELECT
-                m.match_id, m.match_date, m.status AS match_status,
-                m.result_summary, e.name AS event_name,
-                pms.runs_scored, pms.wickets_taken, pms.goals_scored,
-                pms.assists, pms.points_won, pms.sets_won, pms.rating
-            FROM player_match_stats pms
-            JOIN matches m ON pms.match_id = m.match_id
-            LEFT JOIN events e ON m.event_id = e.event_id
-            WHERE pms.player_id = ?
-            ORDER BY m.match_date DESC
-        `).all(req.params.id);
-
-        res.json({
-            ...player,
-            memberships,
-            membership_count: memberships.filter((membership) => membership.is_active).length,
-            team_names: [...new Set(memberships.filter((membership) => membership.is_active).map((membership) => membership.team_name))].join(', '),
-            match_history: matchHistory,
-        });
+        return res.json(attachMembershipsAndSports(db, [player])[0]);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -330,12 +342,9 @@ router.post('/', (req, res) => {
     try {
         const db = req.app.locals.db;
         const {
-            first_name,
-            last_name,
-            email,
-            date_of_birth,
             gender,
             memberships,
+            sport_ids,
             team_id,
             jersey_number,
             position,
@@ -348,7 +357,7 @@ router.post('/', (req, res) => {
 
         const fallbackMembership = team_id ? { team_id, jersey_number, position, membership_type: 'club' } : null;
         const normalizedMemberships = normalizeMemberships(memberships, fallbackMembership);
-        validateMemberships(db, normalizedMemberships);
+        validateMemberships(db, normalizedMemberships, null, sport_ids);
 
         const runCreate = db.transaction(() => {
             const result = db.prepare(`
@@ -367,24 +376,17 @@ router.post('/', (req, res) => {
                 replaceMemberships(db, result.lastInsertRowid, normalizedMemberships);
             }
 
+            if (sport_ids) {
+                syncPlayerSports(db, result.lastInsertRowid, sport_ids);
+            }
+
             return result.lastInsertRowid;
         });
 
         const playerId = runCreate();
-        const player = attachMemberships(db, [db.prepare(`
-            SELECT
-                p.player_id, p.first_name, p.last_name, p.email,
-                p.date_of_birth, p.gender, p.jersey_number, p.position,
-                p.status, p.joined_date, p.player_image_url,
-                t.team_id, t.name AS team_name,
-                s.sport_id, s.name AS sport_name
-            FROM players p
-            LEFT JOIN teams t ON p.team_id = t.team_id
-            LEFT JOIN sports s ON t.sport_id = s.sport_id
-            WHERE p.player_id = ?
-        `).get(playerId)])[0];
+        const player = db.prepare('SELECT * FROM players WHERE player_id = ?').get(playerId);
 
-        res.status(201).json(player);
+        res.status(201).json(attachMembershipsAndSports(db, [player])[0]);
     } catch (err) {
         if (err.message.includes('UNIQUE constraint failed')) {
             return res.status(409).json({ error: 'A player with this email already exists' });
@@ -426,7 +428,7 @@ router.put('/:id', (req, res) => {
         const normalizedMemberships = hasMembershipPayload ? normalizeMemberships(memberships, fallbackMembership) : null;
 
         if (normalizedMemberships) {
-            validateMemberships(db, normalizedMemberships, Number(req.params.id));
+            validateMemberships(db, normalizedMemberships, Number(req.params.id), req.body.sport_ids);
         }
 
         const runUpdate = db.transaction(() => {
@@ -446,6 +448,10 @@ router.put('/:id', (req, res) => {
                 req.params.id,
             );
 
+            if (req.body.sport_ids) {
+                syncPlayerSports(db, Number(req.params.id), req.body.sport_ids);
+            }
+
             if (normalizedMemberships) {
                 replaceMemberships(db, Number(req.params.id), normalizedMemberships);
             }
@@ -453,20 +459,8 @@ router.put('/:id', (req, res) => {
 
         runUpdate();
 
-        const player = attachMemberships(db, [db.prepare(`
-            SELECT
-                p.player_id, p.first_name, p.last_name, p.email,
-                p.date_of_birth, p.gender, p.jersey_number, p.position,
-                p.status, p.joined_date, p.player_image_url,
-                t.team_id, t.name AS team_name,
-                s.sport_id, s.name AS sport_name
-            FROM players p
-            LEFT JOIN teams t ON p.team_id = t.team_id
-            LEFT JOIN sports s ON t.sport_id = s.sport_id
-            WHERE p.player_id = ?
-        `).get(req.params.id)])[0];
-
-        res.json(player);
+        const player = db.prepare('SELECT * FROM players WHERE player_id = ?').get(req.params.id);
+        res.json(attachMembershipsAndSports(db, [player])[0]);
     } catch (err) {
         if (err.message.includes('UNIQUE constraint failed')) {
             return res.status(409).json({ error: 'A player with this email already exists' });
@@ -601,16 +595,16 @@ router.put('/:id/transfer', (req, res) => {
     }
 });
 
-// GET /api/players/:id/stats - Career stats aggregated
+// GET /api/players/:id/stats - Career stats aggregated by sport
 router.get('/:id/stats', (req, res) => {
     try {
         const db = req.app.locals.db;
 
         const stats = db.prepare(`
             SELECT
-                p.player_id,
-                p.first_name || ' ' || p.last_name AS player_name,
-                COUNT(pms.match_id) AS matches_played,
+                ps.sport_id,
+                s.name AS sport_name,
+                COUNT(DISTINCT pms.match_id) AS matches_played,
                 COALESCE(SUM(pms.runs_scored), 0) AS total_runs,
                 COALESCE(SUM(pms.balls_faced), 0) AS total_balls,
                 COALESCE(SUM(pms.wickets_taken), 0) AS total_wickets,
@@ -620,14 +614,22 @@ router.get('/:id/stats', (req, res) => {
                 COALESCE(SUM(pms.red_cards), 0) AS total_reds,
                 COALESCE(SUM(pms.points_won), 0) AS total_points,
                 COALESCE(SUM(pms.sets_won), 0) AS total_sets,
+                COALESCE(SUM(pms.games_won), 0) AS total_games,
                 ROUND(AVG(pms.rating), 2) AS avg_rating
-            FROM players p
-            LEFT JOIN player_match_stats pms ON p.player_id = pms.player_id
-            WHERE p.player_id = ? AND p.is_deleted = 0
-            GROUP BY p.player_id
-        `).get(req.params.id);
+            FROM player_sports ps
+            JOIN sports s ON ps.sport_id = s.sport_id
+            LEFT JOIN player_match_stats pms ON ps.player_id = pms.player_id
+            LEFT JOIN matches m ON pms.match_id = m.match_id AND (m.sport_id = ps.sport_id OR EXISTS (SELECT 1 FROM events e WHERE e.event_id = m.event_id AND e.sport_id = ps.sport_id))
+            WHERE ps.player_id = ?
+            GROUP BY ps.sport_id
+        `).all(req.params.id);
 
-        if (!stats) return res.status(404).json({ error: 'Player not found' });
+        if (!stats.length) {
+            // Check if player exists but has no sports
+            const player = db.prepare('SELECT 1 FROM players WHERE player_id = ?').get(req.params.id);
+            if (!player) return res.status(404).json({ error: 'Player not found' });
+            return res.json([]); 
+        }
 
         res.json(stats);
     } catch (err) {

@@ -51,6 +51,16 @@ function applyMigrations(db) {
         db.run('ALTER TABLE teams ADD COLUMN team_image_url TEXT');
     }
 
+    if (!columnExists(db, 'match_teams', 'wickets')) {
+        console.log('[DB] Applying migration: add match_teams.wickets');
+        db.run('ALTER TABLE match_teams ADD COLUMN wickets INTEGER DEFAULT 0');
+    }
+
+    if (!columnExists(db, 'matches', 'sport_id')) {
+        console.log('[DB] Applying migration: add matches.sport_id');
+        db.run('ALTER TABLE matches ADD COLUMN sport_id INTEGER REFERENCES sports(sport_id) ON DELETE CASCADE');
+    }
+
     db.run(`
         CREATE TABLE IF NOT EXISTS player_team_memberships (
             membership_id    INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -92,6 +102,28 @@ function applyMigrations(db) {
     db.run('DROP VIEW IF EXISTS v_player_statistics');
     db.run('DROP VIEW IF EXISTS v_top_scorers');
     db.run('DROP VIEW IF EXISTS v_team_roster');
+    db.run('DROP VIEW IF EXISTS v_upcoming_matches');
+
+    // Multi-sport support migrations
+    db.run(`
+        CREATE TABLE IF NOT EXISTS player_sports (
+            player_id INTEGER NOT NULL,
+            sport_id  INTEGER NOT NULL,
+            PRIMARY KEY (player_id, sport_id),
+            FOREIGN KEY (player_id) REFERENCES players(player_id) ON DELETE CASCADE,
+            FOREIGN KEY (sport_id)  REFERENCES sports(sport_id)  ON DELETE CASCADE
+        )
+    `);
+
+    // Migrate existing players to player_sports based on their active memberships
+    db.run(`
+        INSERT OR IGNORE INTO player_sports (player_id, sport_id)
+        SELECT DISTINCT ptm.player_id, t.sport_id
+        FROM player_team_memberships ptm
+        JOIN teams t ON ptm.team_id = t.team_id
+        WHERE ptm.is_active = 1
+    `);
+
     db.run(`
         CREATE VIEW IF NOT EXISTS v_player_statistics AS
         SELECT
@@ -113,11 +145,13 @@ function applyMigrations(db) {
             COALESCE(SUM(pms.games_won), 0) AS total_games_won,
             ROUND(AVG(pms.rating), 2) AS avg_rating
         FROM players p
-        LEFT JOIN teams t ON p.team_id = t.team_id
-        LEFT JOIN sports s ON t.sport_id = s.sport_id
+        JOIN player_sports ps ON p.player_id = ps.player_id
+        JOIN sports s ON ps.sport_id = s.sport_id
         LEFT JOIN player_match_stats pms ON p.player_id = pms.player_id
+        LEFT JOIN matches m ON pms.match_id = m.match_id AND (m.sport_id = ps.sport_id OR EXISTS (SELECT 1 FROM events e WHERE e.event_id = m.event_id AND e.sport_id = ps.sport_id))
+        LEFT JOIN teams t ON p.team_id = t.team_id AND t.sport_id = ps.sport_id
         WHERE p.is_deleted = 0
-        GROUP BY p.player_id
+        GROUP BY p.player_id, ps.sport_id
     `);
     db.run(`
         CREATE VIEW IF NOT EXISTS v_top_scorers AS
@@ -136,11 +170,13 @@ function applyMigrations(db) {
             END AS score_total,
             COUNT(pms.match_id) AS matches_played
         FROM players p
-        LEFT JOIN teams t ON p.team_id = t.team_id
-        LEFT JOIN sports s ON t.sport_id = s.sport_id
+        JOIN player_sports ps ON p.player_id = ps.player_id
+        JOIN sports s ON ps.sport_id = s.sport_id
         LEFT JOIN player_match_stats pms ON p.player_id = pms.player_id
+        LEFT JOIN matches m ON pms.match_id = m.match_id AND (m.sport_id = s.sport_id OR EXISTS (SELECT 1 FROM events e WHERE e.event_id = m.event_id AND e.sport_id = s.sport_id))
+        LEFT JOIN teams t ON p.team_id = t.team_id AND t.sport_id = s.sport_id
         WHERE p.is_deleted = 0
-        GROUP BY p.player_id
+        GROUP BY p.player_id, s.sport_id
         HAVING score_total > 0
         ORDER BY sport_name, score_total DESC
     `);
@@ -165,6 +201,30 @@ function applyMigrations(db) {
         LEFT JOIN player_team_memberships ptm ON t.team_id = ptm.team_id AND ptm.is_active = 1
         GROUP BY t.team_id
     `);
+    db.run(`
+        CREATE VIEW IF NOT EXISTS v_upcoming_matches AS
+        SELECT
+            m.match_id,
+            m.match_date,
+            m.status,
+            m.round_name,
+            e.name         AS event_name,
+            e.event_id,
+            s.name         AS sport_name,
+            COALESCE(e.sport_id, m.sport_id) AS sport_id,
+            v.name         AS venue_name,
+            v.location     AS venue_location,
+            GROUP_CONCAT(t.name, ' vs ')  AS team_names
+        FROM matches m
+        LEFT JOIN events e  ON m.event_id = e.event_id
+        LEFT JOIN sports s  ON COALESCE(e.sport_id, m.sport_id) = s.sport_id
+        LEFT JOIN venues v  ON m.venue_id = v.venue_id
+        LEFT JOIN match_teams mt ON m.match_id = mt.match_id
+        LEFT JOIN teams t        ON mt.team_id = t.team_id
+        WHERE m.match_date >= DATE('now') AND m.status = 'scheduled'
+        GROUP BY m.match_id
+        ORDER BY m.match_date ASC
+    `);
 }
 
 /**
@@ -174,6 +234,7 @@ function applyMigrations(db) {
 class DatabaseWrapper {
     constructor(sqlDb) {
         this._db = sqlDb;
+        this._inTransaction = false;
     }
 
     /**
@@ -181,7 +242,7 @@ class DatabaseWrapper {
      */
     exec(sql) {
         this._db.run(sql);
-        this.save();
+        if (!this._inTransaction) this.save();
     }
 
     /**
@@ -253,7 +314,7 @@ class DatabaseWrapper {
                 const lastInsertRowid = db.exec("SELECT last_insert_rowid() AS id")[0]?.values[0]?.[0] || 0;
                 const changes = db.exec("SELECT changes() AS c")[0]?.values[0]?.[0] || 0;
 
-                self.save();
+                if (!self._inTransaction) self.save();
 
                 return { lastInsertRowid, changes };
             }
@@ -277,14 +338,21 @@ class DatabaseWrapper {
     transaction(fn) {
         const self = this;
         return function (...args) {
+            self._inTransaction = true;
             self._db.run('BEGIN TRANSACTION');
             try {
                 const result = fn.apply(null, args);
                 self._db.run('COMMIT');
+                self._inTransaction = false;
                 self.save();
                 return result;
             } catch (err) {
-                self._db.run('ROLLBACK');
+                self._inTransaction = false;
+                try {
+                    self._db.run('ROLLBACK');
+                } catch (rollbackErr) {
+                    // Transaction was already auto-aborted by the engine
+                }
                 throw err;
             }
         };
