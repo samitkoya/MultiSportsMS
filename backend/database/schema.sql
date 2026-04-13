@@ -433,14 +433,29 @@ SELECT
     COALESCE(SUM(pms.points_won), 0)     AS total_points_won,
     COALESCE(SUM(pms.sets_won), 0)       AS total_sets_won,
     COALESCE(SUM(pms.games_won), 0)      AS total_games_won,
-    -- General
-    ROUND(AVG(pms.rating), 2)            AS avg_rating
+    -- Dynamic Rating Calculation
+    ROUND(AVG(
+        COALESCE(pms.rating, 
+            CASE 
+                WHEN s.name = 'Football' THEN 
+                    MIN(10, MAX(1, 6.0 + (COALESCE(pms.goals_scored, 0) * 1.5) + (COALESCE(pms.assists, 0) * 1.0) - (COALESCE(pms.yellow_cards, 0) * 0.5) - (COALESCE(pms.red_cards, 0) * 2.0)))
+                WHEN s.name = 'Cricket' THEN
+                    MIN(10, MAX(1, 5.0 + (COALESCE(pms.runs_scored, 0) / 10.0) + (COALESCE(pms.wickets_taken, 0) * 1.5) - (COALESCE(pms.runs_conceded, 0) / 20.0)))
+                WHEN s.name IN ('Tennis', 'Badminton') THEN
+                    MIN(10, MAX(1, 5.0 + (COALESCE(pms.sets_won, 0) * 1.5) + (COALESCE(pms.points_won, 0) * 0.1)))
+                ELSE 6.0
+            END
+        )
+    ), 2) AS avg_rating
 FROM players p
-LEFT JOIN teams t        ON p.team_id   = t.team_id
-LEFT JOIN sports s       ON t.sport_id  = s.sport_id
-LEFT JOIN player_match_stats pms ON p.player_id = pms.player_id
+JOIN player_sports ps    ON p.player_id = ps.player_id
+JOIN sports s            ON ps.sport_id = s.sport_id
+LEFT JOIN teams t        ON p.team_id = t.team_id AND t.sport_id = ps.sport_id
+LEFT JOIN player_match_stats pms ON p.player_id = pms.player_id AND (
+    EXISTS (SELECT 1 FROM matches m WHERE m.match_id = pms.match_id AND (m.sport_id = ps.sport_id OR EXISTS (SELECT 1 FROM events e WHERE e.event_id = m.event_id AND e.sport_id = ps.sport_id)))
+)
 WHERE p.is_deleted = 0
-GROUP BY p.player_id;
+GROUP BY p.player_id, ps.sport_id;
 
 -- VIEW 3: v_upcoming_matches
 -- Returns all scheduled matches with full context.
