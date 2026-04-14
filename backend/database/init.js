@@ -61,9 +61,66 @@ function applyMigrations(db) {
         db.run('ALTER TABLE matches ADD COLUMN sport_id INTEGER REFERENCES sports(sport_id) ON DELETE CASCADE');
     }
 
-    // Add partial unique index for emails (allows reuse for deleted players)
-    // Note: Column-level UNIQUE constraint on 'email' may still exist if created via old schema.
+    // 1. Repair player_team_memberships (Allow multiple inactive records for same team/type)
+    const membershipSql = db.exec("SELECT sql FROM sqlite_master WHERE name = 'player_team_memberships'")[0]?.values[0]?.[0] || '';
+    if (membershipSql.includes('UNIQUE')) {
+        console.log('[DB] Repairing player_team_memberships table: Removing old unique constraint');
+        db.run('PRAGMA foreign_keys = OFF');
+        db.run('ALTER TABLE player_team_memberships RENAME TO ptm_old');
+        db.run(`
+            CREATE TABLE player_team_memberships (
+                membership_id    INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id        INTEGER NOT NULL,
+                team_id          INTEGER NOT NULL,
+                jersey_number    INTEGER,
+                position         TEXT,
+                membership_type  TEXT    NOT NULL DEFAULT 'club' CHECK (membership_type IN ('club', 'country', 'loan', 'academy', 'other')),
+                is_active        BOOLEAN DEFAULT 1,
+                start_date       DATE    DEFAULT CURRENT_DATE,
+                end_date         DATE,
+                notes            TEXT,
+                created_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (player_id) REFERENCES players(player_id) ON DELETE CASCADE,
+                FOREIGN KEY (team_id)   REFERENCES teams(team_id)   ON DELETE CASCADE
+            )
+        `);
+        db.run('INSERT INTO player_team_memberships SELECT * FROM ptm_old');
+        db.run('DROP TABLE ptm_old');
+        db.run('PRAGMA foreign_keys = ON');
+    }
+
+    // 2. Repair players (Allow email reuse for deleted players)
+    const playerSql = db.exec("SELECT sql FROM sqlite_master WHERE name = 'players'")[0]?.values[0]?.[0] || '';
+    if (playerSql.includes('email TEXT UNIQUE') || playerSql.includes('email TEXT    UNIQUE')) {
+        console.log('[DB] Repairing players table: Removing email column uniqueness');
+        db.run('PRAGMA foreign_keys = OFF');
+        db.run('ALTER TABLE players RENAME TO players_old');
+        db.run(`
+            CREATE TABLE players (
+                player_id     INTEGER PRIMARY KEY AUTOINCREMENT,
+                first_name    TEXT    NOT NULL,
+                last_name     TEXT    NOT NULL,
+                email         TEXT,
+                date_of_birth DATE,
+                gender        TEXT    CHECK (gender IN ('Male', 'Female', 'Other')),
+                team_id       INTEGER,
+                jersey_number INTEGER,
+                position      TEXT,
+                player_image_url TEXT,
+                status        TEXT    DEFAULT 'active' CHECK (status IN ('active', 'injured', 'retired', 'suspended')),
+                is_deleted    BOOLEAN DEFAULT 0,
+                joined_date   DATE    DEFAULT CURRENT_DATE,
+                FOREIGN KEY (team_id) REFERENCES teams(team_id) ON DELETE CASCADE
+            )
+        `);
+        db.run('INSERT INTO players SELECT * FROM players_old');
+        db.run('DROP TABLE players_old');
+        db.run('PRAGMA foreign_keys = ON');
+    }
+
+    // Add partial unique indexes (allows reuse for deleted/inactive records while preventing active duplicates)
     db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_players_email_active ON players(email) WHERE is_deleted = 0');
+    db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_memberships_active ON player_team_memberships(player_id, team_id, membership_type) WHERE is_active = 1');
 
     db.run(`
         CREATE TABLE IF NOT EXISTS player_team_memberships (

@@ -124,7 +124,6 @@ CREATE TABLE IF NOT EXISTS player_team_memberships (
     notes            TEXT,
     created_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
 
-    UNIQUE (player_id, team_id, membership_type, is_active),
     FOREIGN KEY (player_id) REFERENCES players(player_id) ON DELETE CASCADE,
     FOREIGN KEY (team_id)   REFERENCES teams(team_id)   ON DELETE CASCADE
 );
@@ -310,6 +309,7 @@ CREATE INDEX IF NOT EXISTS idx_players_team       ON players(team_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_players_email_active ON players(email) WHERE is_deleted = 0;
 CREATE INDEX IF NOT EXISTS idx_memberships_player ON player_team_memberships(player_id, is_active);
 CREATE INDEX IF NOT EXISTS idx_memberships_team   ON player_team_memberships(team_id, is_active);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_memberships_active ON player_team_memberships(player_id, team_id, membership_type) WHERE is_active = 1;
 CREATE INDEX IF NOT EXISTS idx_matches_event      ON matches(event_id);
 CREATE INDEX IF NOT EXISTS idx_matches_date       ON matches(match_date);
 CREATE INDEX IF NOT EXISTS idx_match_events_match ON match_events(match_id);

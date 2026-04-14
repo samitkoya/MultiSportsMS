@@ -495,15 +495,16 @@ router.delete('/:id', (req, res) => {
         const existing = db.prepare('SELECT * FROM players WHERE player_id = ? AND is_deleted = 0').get(req.params.id);
         if (!existing) return res.status(404).json({ error: 'Player not found' });
 
+        const playerId = Number(req.params.id);
         const runDelete = db.transaction(() => {
             db.prepare(`
                 UPDATE player_team_memberships
                 SET is_active = 0, end_date = COALESCE(end_date, CURRENT_DATE)
                 WHERE player_id = ? AND is_active = 1
-            `).run(req.params.id);
+            `).run(playerId);
 
-            db.prepare('UPDATE players SET is_deleted = 1 WHERE player_id = ?').run(req.params.id);
-            syncPlayerPrimaryMembership(db, Number(req.params.id));
+            db.prepare('UPDATE players SET is_deleted = 1 WHERE player_id = ?').run(playerId);
+            syncPlayerPrimaryMembership(db, playerId);
         });
 
         runDelete();
@@ -513,6 +514,10 @@ router.delete('/:id', (req, res) => {
             note: 'Historical stats and membership history are preserved. Player will no longer appear in active lists.',
         });
     } catch (err) {
+        console.error(`[API] Error deleting player ${req.params.id}:`, err);
+        if (err.message.includes('UNIQUE constraint failed')) {
+            return res.status(409).json({ error: `Database conflict during deletion: ${err.message}. This is usually caused by overlapping membership history.` });
+        }
         res.status(500).json({ error: err.message });
     }
 });
