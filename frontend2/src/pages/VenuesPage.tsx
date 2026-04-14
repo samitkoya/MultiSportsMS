@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
+import { Pencil, Plus, Trash2, ArrowUp, Search, ArrowDown } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { toast } from "sonner";
 
 export default function VenuesPage() {
   const qc = useQueryClient();
+  const [search, setSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [selectedVenueId, setSelectedVenueId] = useState<number | null>(null);
@@ -106,10 +107,17 @@ export default function VenuesPage() {
     return sortConfig.direction === "asc" ? <ArrowUp size={14} className="ml-1 text-primary" /> : <ArrowDown size={14} className="ml-1 text-primary" />;
   };
 
-  const sortedVenues = [...(venues || [])].sort((a, b) => {
+  const filtered = venues?.filter((venue) => {
+    const q = search.toLowerCase();
+    return `${venue.name} ${venue.location} ${venue.surface_type || ""} ${venue.capacity || ""}`
+      .toLowerCase()
+      .includes(q);
+  });
+
+  const sortedVenues = [...(filtered || [])].sort((a, b) => {
     if (!sortConfig) return 0;
     const { key, direction } = sortConfig;
-    
+
     let aValue: any = a[key as keyof Venue];
     let bValue: any = b[key as keyof Venue];
 
@@ -134,23 +142,35 @@ export default function VenuesPage() {
         </Button>
       </PageHeader>
 
+      <div className="mb-6 flex items-center gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search venues..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 bg-secondary border-border"
+          />
+        </div>
+      </div>
+
       <div className="glass-card overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
-              <TableHead 
+              <TableHead
                 className="text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => handleSort('name')}
               >
                 <div className="flex items-center">Venue <SortIcon column="name" /></div>
               </TableHead>
-              <TableHead 
+              <TableHead
                 className="text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => handleSort('surface_type')}
               >
                 <div className="flex items-center">Surface <SortIcon column="surface_type" /></div>
               </TableHead>
-              <TableHead 
+              <TableHead
                 className="text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => handleSort('capacity')}
               >

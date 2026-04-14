@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, Pencil, ClipboardCheck, Activity, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Trash2, Pencil, ClipboardCheck, Activity, ArrowUp, ArrowDown, Search } from "lucide-react";
 import { getMatches, logMatchResult, logMatchScore, scheduleMatch, updateMatchStatus, deleteMatch, getEvents, getEvent, getSports, getTeams, getPlayers, getMatchDetails, savePlayerMatchStats, type Match } from "@/lib/api";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
@@ -42,7 +42,7 @@ interface MatchExtended extends Match {
 export default function MatchesPage() {
   const qc = useQueryClient();
   const { data: rawMatches, isLoading } = useQuery({ queryKey: ["matches"], queryFn: getMatches });
-  
+
   const matches: MatchExtended[] | undefined = rawMatches?.map(m => {
     const t1 = m.teams?.[0];
     const t2 = m.teams?.[1];
@@ -58,6 +58,7 @@ export default function MatchesPage() {
       team2_wickets: t2?.wickets ?? "",
     };
   });
+  const [search, setSearch] = useState("");
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
   const { data: events } = useQuery({ queryKey: ["events"], queryFn: getEvents });
   const { data: teams } = useQuery({ queryKey: ["teams"], queryFn: getTeams });
@@ -89,32 +90,32 @@ export default function MatchesPage() {
 
   const createMut = useMutation({
     mutationFn: scheduleMatch,
-    onSuccess: () => { 
-      qc.invalidateQueries({ queryKey: ["matches"] }); 
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["matches"] });
       qc.invalidateQueries({ queryKey: ["dashboard-overview"] });
-      setCreateOpen(false); 
-      toast.success("Match scheduled"); 
+      setCreateOpen(false);
+      toast.success("Match scheduled");
     },
     onError: (err: any) => toast.error(err.message || "Failed to schedule match"),
   });
 
   const updateMut = useMutation({
     mutationFn: (data: { id: number; body: any }) => updateMatchStatus(data.id, data.body),
-    onSuccess: () => { 
-      qc.invalidateQueries({ queryKey: ["matches"] }); 
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["matches"] });
       qc.invalidateQueries({ queryKey: ["dashboard-overview"] });
-      setCreateOpen(false); 
-      toast.success("Match updated"); 
+      setCreateOpen(false);
+      toast.success("Match updated");
     },
     onError: (err: any) => toast.error(err.message || "Failed to update match"),
   });
 
   const deleteMut = useMutation({
     mutationFn: deleteMatch,
-    onSuccess: () => { 
-      qc.invalidateQueries({ queryKey: ["matches"] }); 
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["matches"] });
       qc.invalidateQueries({ queryKey: ["dashboard-overview"] });
-      toast.success("Match deleted"); 
+      toast.success("Match deleted");
     },
     onError: (err: any) => toast.error(err.message || "Failed to delete match"),
   });
@@ -266,10 +267,16 @@ export default function MatchesPage() {
     return sortConfig.direction === "asc" ? <ArrowUp size={14} className="ml-1 text-primary" /> : <ArrowDown size={14} className="ml-1 text-primary" />;
   };
 
-  const sortedMatches = [...(matches || [])].sort((a, b) => {
+  const filtered = matches?.filter((match) => {
+    const q = search.toLowerCase();
+    return `${match.team1_name} ${match.team2_name} ${match.sport_name || ""} ${match.match_date || ""}`
+      .toLowerCase()
+      .includes(q);
+  });
+
+  const sortedMatches = [...(filtered || [])].sort((a, b) => {
     if (!sortConfig) return 0;
     const { key, direction } = sortConfig;
-    
     let aValue: any = a[key as keyof MatchExtended];
     let bValue: any = b[key as keyof MatchExtended];
 
@@ -293,30 +300,41 @@ export default function MatchesPage() {
           <Plus size={16} /> Schedule Match
         </Button>
       </PageHeader>
-      <div className="glass-card glass-card-glow-green overflow-hidden">
+      <div className="mb-6 flex items-center gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search matches..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 bg-secondary border-border"
+          />
+        </div>
+      </div>
+      <div className="glass-card overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
-              <TableHead 
+              <TableHead
                 className="text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => handleSort('team1_name')}
               >
                 <div className="flex items-center">Match <SortIcon column="team1_name" /></div>
               </TableHead>
-              <TableHead 
+              <TableHead
                 className="text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => handleSort('sport_name')}
               >
                 <div className="flex items-center">Sport <SortIcon column="sport_name" /></div>
               </TableHead>
               <TableHead className="text-muted-foreground text-center">Score</TableHead>
-              <TableHead 
+              <TableHead
                 className="text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => handleSort('match_date')}
               >
                 <div className="flex items-center">Date <SortIcon column="match_date" /></div>
               </TableHead>
-              <TableHead 
+              <TableHead
                 className="text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => handleSort('status')}
               >
@@ -351,7 +369,7 @@ export default function MatchesPage() {
                     })() : "—"}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {new Date(m.match_date).toLocaleDateString()}
+                    {new Date(m.match_date).toLocaleDateString("en-GB")}
                   </TableCell>
                   <TableCell>
                     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${statusBadge(m.status)}`}>
@@ -359,7 +377,7 @@ export default function MatchesPage() {
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
+                    <div className="flex items-center justify-end gap-1">
                       <Button variant="ghost" size="icon" title="Log Player Stats" onClick={() => openStats(m)}>
                         <Activity size={16} className="text-sport-blue" />
                       </Button>
@@ -595,10 +613,10 @@ export default function MatchesPage() {
                 )}
               </div>
             )}
-            
+
             <div className="flex justify-end gap-2 mt-2">
-               <Button variant="secondary" size="sm" onClick={() => setStatsForm({ player_id: statsForm.player_id })}>Clear</Button>
-               <Button size="sm" onClick={handleSaveStats} disabled={!statsForm.player_id || statsMut.isPending}>Save Stat</Button>
+              <Button variant="secondary" size="sm" onClick={() => setStatsForm({ player_id: statsForm.player_id })}>Clear</Button>
+              <Button size="sm" onClick={handleSaveStats} disabled={!statsForm.player_id || statsMut.isPending}>Save Stat</Button>
             </div>
 
             {loadingMatchDetails ? (
@@ -614,11 +632,11 @@ export default function MatchesPage() {
                           <TableCell className="font-medium">{s.player_name}</TableCell>
                           <TableCell className="text-muted-foreground">{s.team_name}</TableCell>
                           <TableCell className="text-right">
-                             {s.runs_scored > 0 ? `Runs: ${s.runs_scored} ` : ""}
-                             {s.wickets_taken > 0 ? `Wkt: ${s.wickets_taken} ` : ""}
-                             {s.goals_scored > 0 ? `Gls: ${s.goals_scored} ` : ""}
-                             {s.points_won > 0 ? `Pts: ${s.points_won} ` : ""}
-                             {s.sets_won > 0 ? `Sets: ${s.sets_won} ` : ""}
+                            {s.runs_scored > 0 ? `Runs: ${s.runs_scored} ` : ""}
+                            {s.wickets_taken > 0 ? `Wkt: ${s.wickets_taken} ` : ""}
+                            {s.goals_scored > 0 ? `Gls: ${s.goals_scored} ` : ""}
+                            {s.points_won > 0 ? `Pts: ${s.points_won} ` : ""}
+                            {s.sets_won > 0 ? `Sets: ${s.sets_won} ` : ""}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -641,7 +659,7 @@ export default function MatchesPage() {
             <DialogTitle className="text-foreground">{isEdit ? "Edit Match" : "Schedule Match"}</DialogTitle>
             <DialogDescription>Select teams and provide match details.</DialogDescription>
           </DialogHeader>
-           <div className="grid gap-4 py-4">
+          <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Event / Tournament</Label>
@@ -674,7 +692,7 @@ export default function MatchesPage() {
                 </div>
               )}
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Team 1</Label>
@@ -686,8 +704,8 @@ export default function MatchesPage() {
                     {teams?.filter(t => String(t.team_id) !== form.team2_id)
                       .filter(t => form.event_id !== "standalone" ? eventData?.teams?.some(et => et.team_id === t.team_id) : (form.sport_id ? t.sport_id === Number(form.sport_id) : true))
                       .map((t) => (
-                      <SelectItem key={t.team_id} value={String(t.team_id)}>{t.name}</SelectItem>
-                    ))}
+                        <SelectItem key={t.team_id} value={String(t.team_id)}>{t.name}</SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -701,8 +719,8 @@ export default function MatchesPage() {
                     {teams?.filter(t => String(t.team_id) !== form.team1_id)
                       .filter(t => form.event_id !== "standalone" ? eventData?.teams?.some(et => et.team_id === t.team_id) : (form.sport_id ? t.sport_id === Number(form.sport_id) : true))
                       .map((t) => (
-                      <SelectItem key={t.team_id} value={String(t.team_id)}>{t.name}</SelectItem>
-                    ))}
+                        <SelectItem key={t.team_id} value={String(t.team_id)}>{t.name}</SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>

@@ -7,18 +7,40 @@ interface CoachAvatarProps {
   className?: string;
 }
 
-const PLACEHOLDER_SRC = "/placeholder.svg";
-
 export function CoachAvatar({ src, alt, className }: CoachAvatarProps) {
-  const [imageSrc, setImageSrc] = useState(src || PLACEHOLDER_SRC);
+  const [hasError, setHasError] = useState(false);
+
+  const showFallback = !src || hasError;
+
+  if (showFallback) {
+    return (
+      <svg
+        viewBox="0 0 100 100"
+        role="img"
+        aria-label={alt}
+        className={cn("h-12 w-12", className)}
+      >
+        {<rect width="100" height="100" rx="15" fill="#262B35" />}
+
+        {/* Head */}
+        <circle cx="50" cy="38" r="18" fill="#676c73" />
+
+        {/* Body */}
+        <path
+          d="M20 85c0-16 13-26 30-26s30 10 30 26"
+          fill="#676c73"
+        />
+      </svg>
+    );
+  }
 
   return (
     <img
-      src={imageSrc}
+      src={src}
       alt={alt}
-      className={cn("h-12 w-12 rounded-md bg-transparent object-cover", className)}
+      className={cn("h-12 w-12 bg-transparent rounded-md object-cover", className)}
       referrerPolicy="no-referrer"
-      onError={() => setImageSrc(PLACEHOLDER_SRC)}
+      onError={() => setHasError(true)}
     />
   );
 }

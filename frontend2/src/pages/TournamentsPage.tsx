@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, Pencil, ShieldPlus, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Trash2, Pencil, ShieldPlus, ArrowUp, ArrowDown, Search } from "lucide-react";
 import { getEvents, getEvent, getSports, getTeams, createEvent, updateEvent, deleteEvent, registerTeamToEvent } from "@/lib/api";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
@@ -22,6 +22,7 @@ import { toast } from "sonner";
 
 export default function TournamentsPage() {
   const qc = useQueryClient();
+  const [search, setSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
@@ -150,7 +151,14 @@ export default function TournamentsPage() {
     return sortConfig.direction === "asc" ? <ArrowUp size={14} className="ml-1 text-primary" /> : <ArrowDown size={14} className="ml-1 text-primary" />;
   };
 
-  const sortedEvents = [...(events || [])].sort((a, b) => {
+   const filtered = events?.filter((e) => {
+    const q = search.toLowerCase();
+    return `${e.name} ${e.sport_name || ""} ${e.format || ""}`
+      .toLowerCase()
+      .includes(q);
+  });
+
+  const sortedEvents = [...(filtered || [])].sort((a, b) => {
     if (!sortConfig) return 0;
     const { key, direction } = sortConfig;
     
@@ -177,7 +185,18 @@ export default function TournamentsPage() {
           <Plus size={16} /> Create Tournament
         </Button>
       </PageHeader>
-      <div className="glass-card glass-card-glow-yellow overflow-hidden">
+      <div className="mb-6 flex items-center gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search tournaments..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 bg-secondary border-border"
+          />
+        </div>
+      </div>
+      <div className="glass-card overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
@@ -239,8 +258,8 @@ export default function TournamentsPage() {
                     </TableCell>
                     <TableCell><Badge variant="secondary">{e.sport_name}</Badge></TableCell>
                     <TableCell className="text-muted-foreground capitalize">{e.format || "—"}</TableCell>
-                    <TableCell className="text-muted-foreground">{e.start_date ? new Date(e.start_date).toLocaleDateString() : "—"}</TableCell>
-                    <TableCell className="text-muted-foreground">{e.end_date ? new Date(e.end_date).toLocaleDateString() : "—"}</TableCell>
+                    <TableCell className="text-muted-foreground">{e.start_date ? new Date(e.start_date).toLocaleDateString("en-GB") : "—"}</TableCell>
+                    <TableCell className="text-muted-foreground">{e.end_date ? new Date(e.end_date).toLocaleDateString("en-GB") : "—"}</TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${statusStyle(status)}`}>
                         {status}

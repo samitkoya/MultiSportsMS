@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, ArrowUpDown, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { CoachAvatar } from "@/components/CoachAvatar";
@@ -14,6 +14,7 @@ import { createCoach, deleteCoach, getCoaches, type Coach, updateCoach } from "@
 import { toast } from "sonner";
 
 export default function CoachesPage() {
+  const [search, setSearch] = useState("");
   const qc = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
@@ -62,7 +63,14 @@ export default function CoachesPage() {
     onError: () => toast.error("Failed to delete coach"),
   });
 
-  let sortedCoaches = coaches ? [...coaches] : [];
+  const filtered = coaches?.filter((coach) => {
+    const q = search.toLowerCase();
+    return `${coach.first_name} ${coach.last_name} ${coach.email || ""} ${coach.specialization || ""} ${coach.experience_years || ""}`
+      .toLowerCase()
+      .includes(q);
+  });
+
+  let sortedCoaches = filtered ? [...filtered] : [];
   if (sortConfig) {
     sortedCoaches.sort((a, b) => {
       let valA: any = "";
@@ -139,6 +147,18 @@ export default function CoachesPage() {
           <Plus size={16} /> Add Coach
         </Button>
       </PageHeader>
+
+      <div className="mb-6 flex items-center gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search coaches..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 bg-secondary border-border"
+          />
+        </div>
+      </div>
 
       <div className="glass-card overflow-hidden">
         <Table>
